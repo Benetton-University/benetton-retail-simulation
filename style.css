@@ -1,0 +1,242 @@
+/* General settings for the whole page */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f6f8;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+    /* The next 3 lines center the app on large desktop screens */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* The magic rule that keeps it looking good on Desktop AND Mobile */
+.app-header, .simulation-screen, .controls {
+    width: 100%;
+    max-width: 600px; /* It will fill a phone screen, but stop expanding at 600px on a desktop */
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    padding: 20px;
+    margin-bottom: 20px;
+    box-sizing: border-box;
+}
+
+/* Header Styling */
+.app-header h1 {
+    margin: 0 0 5px 0;
+    font-size: 1.5rem;
+    color: #0056b3; /* A professional corporate blue */
+}
+
+.app-header p {
+    margin: 0;
+    color: #666;
+    font-weight: bold;
+}
+
+/* Customer Avatar Placeholder */
+.customer-avatar {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.customer-avatar img {
+    border-radius: 50%;
+    border: 3px solid #e0e0e0;
+}
+
+/* Chat Window Styling */
+.chat-window {
+    background-color: #fafafa;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 15px;
+    min-height: 150px;
+}
+
+.message {
+    background-color: #e3f2fd;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border-left: 4px solid #2196f3;
+}
+
+/* Button Grid Styling */
+.button-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.action-btn {
+    background-color: white;
+    border: 2px solid #0056b3;
+    color: #0056b3;
+    padding: 12px;
+    font-size: 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+/* Hover effect for desktop users with a mouse */
+.action-btn:hover {
+    background-color: #0056b3;
+    color: white;
+}
+/* ==========================================
+   INLINE FEEDBACK PANEL (Blinkit Style)
+   ========================================== */
+
+.feedback-panel {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 8px;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.feedback-panel h4 {
+    margin: 0 0 8px 0;
+    font-size: 1.1rem;
+}
+
+.feedback-panel p {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+/* Colors for the panel based on right/wrong answers */
+.panel-correct {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.panel-incorrect {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* The Continue Button inside the feedback panel */
+.continue-btn {
+    margin-top: 15px;
+    width: 100%;
+    background-color: #333;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.continue-btn:hover { background-color: #000; }
+
+/* We removed the 'transform' property so it doesn't break the fixed image positioning */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+/* ==========================================
+   FEEDBACK IMAGE STYLING (Responsive)
+   ========================================== */
+
+/* 1. Mobile Default (Inside the box) */
+.feedback-image {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+/* ==========================================
+   DESKTOP SIDE-PANEL IMAGES (No Overlap)
+   ========================================== */
+
+@media (min-width: 1200px) {
+    .feedback-image {
+        position: fixed;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 320px; /* Slightly smaller to ensure it fits the margins */
+        height: 450px;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        border: 6px solid white;
+        border-radius: 16px;
+        z-index: -1; /* Pushes it behind the main app if the window is too small */
+    }
+
+    /* If the answer is Correct, snap the image to the RIGHT margin */
+    .panel-correct .feedback-image {
+        right: 5%;
+        left: auto;
+        border-color: #d4edda; /* Light green frame */
+        animation: popInRight 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    /* If the answer is Incorrect, snap the image to the LEFT margin */
+    .panel-incorrect .feedback-image {
+        left: 5%;
+        right: auto;
+        border-color: #f8d7da; /* Light red frame */
+        animation: popInLeft 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+}
+
+/* Specific animations for each side */
+@keyframes popInRight {
+    from { opacity: 0; transform: translateY(-50%) translateX(50px); }
+    to { opacity: 1; transform: translateY(-50%) translateX(0); }
+}
+
+@keyframes popInLeft {
+    from { opacity: 0; transform: translateY(-50%) translateX(-50px); }
+    to { opacity: 1; transform: translateY(-50%) translateX(0); }
+}
+
+/* The animation rule for the desktop image */
+@keyframes popIn {
+    from { opacity: 0; transform: translateY(-50%) scale(0.8); }
+    to { opacity: 1; transform: translateY(-50%) scale(1); }
+}
+/* ==========================================
+   CUSTOMER MOOD METER
+   ========================================== */
+
+.mood-container {
+    background-color: #e0e0e0;
+    border-radius: 20px;
+    margin-bottom: 15px;
+    height: 24px;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.mood-bar {
+    height: 100%;
+    width: 50%; /* Starts at neutral */
+    background-color: #ffc107; /* Starts yellow */
+    border-radius: 20px;
+    transition: width 0.5s ease-in-out, background-color 0.5s ease-in-out;
+}
+
+.mood-label {
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    top: 3px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: #333;
+    pointer-events: none; /* Prevents the text from messing up clicks */
+}

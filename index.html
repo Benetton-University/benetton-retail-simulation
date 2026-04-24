@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retail Training Simulation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="app-header">
+        <h1>L&D Simulation Hub</h1>
+        <p>Scenario: The Difficult Return</p>
+    </header>
+
+    <section class="simulation-screen">
+        <div class="customer-avatar">
+            <img src="https://via.placeholder.com/150" alt="Customer Avatar">
+        </div>
+        
+        <div class="chat-window" id="chat-window">
+            <div class="message customer-message">
+                <p>Hi, I bought this jacket yesterday but I want to return it. I lost the receipt though.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="controls">
+        <h3>Choose your response:</h3>
+        <div class="button-grid">
+            <button class="action-btn" onclick="sendResponse('Sorry, we cannot accept returns without a receipt.')">
+                Deny Return (Strict Policy)
+            </button>
+            <button class="action-btn" onclick="sendResponse('I can look up your purchase using your phone number.')">
+                Offer Solution (Phone Lookup)
+            </button>
+            <button class="action-btn" onclick="sendResponse('Let me get my manager to handle this.')">
+                Escalate to Manager
+            </button>
+        </div>
+    </section>
+
+    <script src="app.js"></script>
+</body>
+</html>
