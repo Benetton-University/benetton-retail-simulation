@@ -22,11 +22,14 @@ fs.createReadStream('employees.csv')
     let failCount = 0;
 
     for (const row of results) {
-        // 1. Generate the invite link WITHOUT sending an email
+       // 1. Generate the invite link WITHOUT sending an email
         const { data, error } = await supabaseAdmin.auth.admin.generateLink({
             type: 'invite',
             email: row.email,
-            options: { redirectTo: 'http://127.0.0.1:5500/hub.html' }
+            options: { 
+                // Updated with your specific repository name
+                redirectTo: 'https://sojaosid.github.io/benetton-retail-simulation/hub.html' 
+            }
         });
         
         if (error) {
