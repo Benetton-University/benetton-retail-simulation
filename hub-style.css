@@ -83,4 +83,4 @@ body {
 
 /* The Arrow on the Right */
 .card-arrow { font-size: 1.5rem; color: #ccc; font-weight: bold; transition: color 0.2s; }
-.training-card:hover .card-arrow { color: #007236; }
+.training-card:hover .card-arrow { color: #007236; } 

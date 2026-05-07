@@ -1,256 +1,59 @@
+// Tell the Engine what to name this in the HR Database
+window.currentModuleName = "The Difficult Return (Exchange Policy)";
+
 // ==========================================
-// 1. THE DATABASE (Recovery Paths & Mood Scores)
+// THE DATABASE: "The Difficult Exchange"
 // ==========================================
 
 const scenarioData = {
     start: {
-        customerText: "Hi, I bought this jacket yesterday but I want to return it. I lost the receipt though.",
+        customerText: "Hi, I bought this Benetton polo here a while ago. It doesn't fit right, so I just want my money back. I have the invoice right here.",
         options: [
-            { text: "We can't do returns without a receipt.", nextStep: "hostileReaction1", isOptimal: false, moodChange: -35, feedback: "Flat denial instantly ruins the customer experience. But the interaction isn't over yet—try to save it.", imageUrl: "images/angry-customer.jpg" },
-            { text: "No problem, let's see if we can look it up by your phone number.", nextStep: "phoneLookup", isOptimal: true, moodChange: 15, feedback: "Excellent. Offering an immediate alternative keeps the customer calm." },
-            { text: "I need to call my manager for this.", nextStep: "managerEscalation", isOptimal: false, moodChange: -15, feedback: "You should attempt to solve basic receipt issues before pulling a manager off the floor." }
+            { text: "Sure, let me check the invoice and get your cash refund processed.", nextStep: "refundRecovery", isOptimal: false, moodChange: -40, feedback: "You just promised a cash refund, violating the strict 'No Cash Refund' policy. Now you have to walk it back." },
+            { text: "I can certainly help you with an exchange! However, please note that we do not offer cash refunds.", nextStep: "checkCondition", isOptimal: true, moodChange: 10, feedback: "Great start. You maintained a positive tone while setting expectations." },
+            { text: "We don't do refunds, only exchanges. Hand me the invoice.", nextStep: "refundRecovery", isOptimal: false, moodChange: -20, feedback: "Too blunt. You created immediate friction. Prepare to de-escalate." }
         ]
     },
-    
-    // RECOVERY PATH 1
-    hostileReaction1: {
-        customerText: "Are you kidding me? I was literally just here yesterday! I spend thousands of dollars at this brand. This is ridiculous.",
+    refundRecovery: {
+        customerText: "Wait, what? Are you giving me my money back or not? I just want to return this, it's 22 days old.",
         options: [
-            { text: "I understand, but policy is policy. I can't do anything.", nextStep: "failScenario", isOptimal: false, moodChange: -40, feedback: "Doubling down on policy when a customer is already angry guarantees a failed interaction.", imageUrl: "images/angry-customer.jpg" },
-            { text: "You're right, I apologize for being so abrupt. Let me see if I can locate the transaction using your phone number instead.", nextStep: "phoneLookup", isOptimal: true, moodChange: 25, feedback: "Fantastic recovery! You owned the mistake, apologized, and immediately pivoted to a solution.", imageUrl: "images/happy-customer.jpg" },
-            { text: "I will call the manager.", nextStep: "managerEscalation", isOptimal: true, moodChange: -10, feedback: "Since you escalated the customer, handing it off to a manager is the safest bet, though not ideal." }
+            { text: "I apologize for the confusion. We can only offer an exchange. Let me check the garment to see if it qualifies.", nextStep: "checkCondition", isOptimal: true, moodChange: 15, feedback: "Good recovery. You owned the mistake, apologized, and moved the process forward." },
+            { text: "No cash. It's store policy. But I can exchange it since it's 22 days old.", nextStep: "failTierRecovery", isOptimal: false, moodChange: -30, feedback: "You are still being combative AND you just assumed you can take it without checking if they are a Green Tier member!" }
         ]
     },
-
-    phoneLookup: {
-        customerText: "Oh, thank you! My phone number is 555-0198.",
+    checkCondition: {
+        customerText: "Fine, an exchange. As I said, it's 22 days old. The tags are still on and it's unworn.",
         options: [
-            { text: "Give me one second while I pull that up in the system.", nextStep: "systemGlitch", isOptimal: true, moodChange: 10, feedback: "Good communication. Keeping the customer informed of what you are doing builds trust." },
-            { text: "[Stare at the computer silently while typing]", nextStep: "systemGlitch", isOptimal: false, moodChange: -10, feedback: "Silence can make customers anxious. Always narrate your actions positively." }
+            { text: "It looks perfectly re-saleable. May I ask, are you a Green Tier member with us?", nextStep: "evaluateTimeline", isOptimal: true, moodChange: 10, feedback: "Excellent. You verified the condition and checked their tier status." },
+            { text: "Since it's 22 days old, you missed the standard 15-day window. I can't take this.", nextStep: "failTierRecovery", isOptimal: false, moodChange: -30, feedback: "You forgot to ask if they are Green Tier! They get 30 days. Now they are angry." }
         ]
     },
-    systemGlitch: {
-        customerText: "Is there a problem? I'm kind of in a hurry to get back to my car.",
+    failTierRecovery: {
+        customerText: "Are you kidding me? I spend so much money here, I am a Green Tier member! Don't I get 30 days?!",
         options: [
-            { text: "Please calm down, the system is just slow.", nextStep: "escalatedGlitch", isOptimal: false, moodChange: -25, feedback: "Telling a customer to 'calm down' almost always has the exact opposite effect. Try to fix this.", imageUrl: "images/angry-customer.jpg" },
-            { text: "I apologize for the wait, our system is just taking a moment to load your profile. I'll be as fast as I can.", nextStep: "resolutionFound", isOptimal: true, moodChange: 15, feedback: "Perfect. You validated their urgency, apologized for the tech issue, and reassured them." }
+            { text: "You are absolutely right, I sincerely apologize. Green Tier does get 30 days. Let's continue processing this.", nextStep: "evaluateTimeline", isOptimal: true, moodChange: 20, feedback: "Excellent de-escalation. You admitted fault and validated their loyalty." },
+            { text: "Oh. Well, you still bought it online, so I can't take it here anyway.", nextStep: "explainPolicy", isOptimal: false, moodChange: -40, feedback: "Never stack bad news defensively. You just destroyed the customer's trust." }
         ]
     },
-
-    // RECOVERY PATH 2
-    escalatedGlitch: {
-        customerText: "Don't tell me to calm down! I just asked a simple question about how long this takes. Get me a manager.",
+    evaluateTimeline: {
+        customerText: "Actually, I just remembered I bought this polo on the Benetton website, but figured I could just swap it here in the store.",
         options: [
-            { text: "I will call them over.", nextStep: "managerEscalation", isOptimal: true, moodChange: -10, feedback: "The customer specifically requested a manager. You must comply to prevent further escalation." },
-            { text: "You are absolutely right, and I apologize for my phrasing. Good news though—your transaction just popped up. Let's get this sorted.", nextStep: "resolutionFound", isOptimal: true, moodChange: 30, feedback: "A brilliant pivot. You validated their anger, apologized directly for your tone, and immediately shifted focus to the positive result." }
+            { text: "Because this is an online order, policy requires it to be exchanged through the E-com portal, not an exclusive store.", nextStep: "explainPolicy", isOptimal: true, moodChange: 5, feedback: "Perfect application of the channel policy (E-com to E-com)." },
+            { text: "I'm not supposed to, but I guess I can just swap it for you to save time.", nextStep: "explainPolicy", isOptimal: false, moodChange: -25, feedback: "You just broke the channel constraint policy! Store inventory will be heavily impacted." }
         ]
     },
-
-    resolutionFound: {
-        customerText: "Okay, fine. Did you find it? Can I just get cash back?",
+    explainPolicy: {
+        customerText: "This is so frustrating and strict! What if it was torn? Would you have taken it then?",
         options: [
-            { text: "Since you don't have the receipt, policy says store credit only.", nextStep: "pushback", isOptimal: false, moodChange: -15, feedback: "While technically true, quoting 'policy' sounds robotic and defensive." },
-            { text: "Because we don't have the physical receipt, I can issue you a store credit for the full amount right now.", nextStep: "pushback", isOptimal: true, moodChange: 10, feedback: "Great phrasing. You framed the store credit as a solution, not a punishment." }
+            { text: "Yes, we accept all damaged goods for up to 180 days.", nextStep: "finalResolution", isOptimal: false, moodChange: -10, feedback: "Incorrect. Exchanges are ONLY valid for 180 days if there is a 'Manufacturing Defect'." },
+            { text: "If it had a manufacturing defect, we could exchange it within 180 days. But standard damaged goods are not accepted.", nextStep: "finalResolution", isOptimal: true, moodChange: 10, feedback: "Spot on. You clearly distinguished between a defect and user damage." }
         ]
     },
-    pushback: {
-        customerText: "Store credit? But I paid with cash yesterday. I just want my money back.",
+    finalResolution: {
+        customerText: "Whatever. I'll just keep the polo and give it to my brother. This took way too long.",
         options: [
-            { text: "I completely understand the frustration. However, the store credit never expires and can be used at any location.", nextStep: "acceptance", isOptimal: true, moodChange: 15, feedback: "Excellent de-escalation. You validated their feelings and immediately highlighted the benefits of the credit." },
-            { text: "I can't override the system. Do you want the credit or not?", nextStep: "failScenario", isOptimal: false, moodChange: -40, feedback: "Ultimatums will immediately destroy any remaining goodwill. This violates brand service standards.", imageUrl: "images/angry-customer.jpg" }
+            { text: "Have a good day.", nextStep: "endModule", isOptimal: false, moodChange: 0, feedback: "A missed opportunity to end on a high note." },
+            { text: "I completely understand your frustration today. Thank you for your patience, and please let me know if I can help you find something else.", nextStep: "endModule", isOptimal: true, moodChange: 15, feedback: "Great final effort to salvage the customer relationship." }
         ]
-    },
-    acceptance: {
-        customerText: "Okay, fine. I guess that's fair. I was actually going to buy a sweater today anyway.",
-        options: [
-            { text: "Here is your card. Have a good day.", nextStep: "successScenario", isOptimal: false, moodChange: -10, feedback: "Missed opportunity! The customer explicitly mentioned buying a sweater. You missed a perfect upsell transition." },
-            { text: "I can definitely help you find a great sweater! Let's get this credit issued so you can go browse the new summer collection.", nextStep: "successScenario", isOptimal: true, moodChange: 20, feedback: "Incredible! You seamlessly transitioned a difficult return into a positive sales interaction.", imageUrl: "images/happy-customer.jpg" }
-        ]
-    },
-    managerEscalation: {
-        customerText: "<em>[The customer glares at you while waiting for the manager. You lost control of the interaction.]</em>",
-        options: [{ text: "Restart Simulation", nextStep: "start" }]
-    },
-    failScenario: {
-        customerText: "<em>[Simulation Failed. The customer left the store angry and wrote a negative review.]</em>",
-        options: [{ text: "Restart Simulation", nextStep: "start" }]
-    },
-    successScenario: {
-        customerText: "<em>[Success! Return processed smoothly and customer retained.]</em>",
-        options: [{ text: "Complete Simulation", nextStep: "start" }]
     }
 };
-
-// ==========================================
-// 2. THE LOGIC (UI, Mood Meter & Feedback)
-// ==========================================
-
-const chatWindow = document.getElementById('chat-window');
-const buttonGrid = document.querySelector('.button-grid');
-const controlsSection = document.querySelector('.controls'); 
-
-let currentMood = 50; 
-
-function updateMoodMeter(change) {
-    currentMood += change;
-    
-    if (currentMood > 100) currentMood = 100;
-    if (currentMood < 0) currentMood = 0;
-
-    const moodBar = document.getElementById('dynamic-mood-bar');
-    const moodLabel = document.getElementById('dynamic-mood-label');
-    
-    if (moodBar) {
-        moodBar.style.width = currentMood + '%';
-        
-        if (currentMood >= 70) {
-            moodBar.style.backgroundColor = '#28a745'; // Green
-            moodLabel.innerText = 'Customer Mood: Happy';
-        } else if (currentMood <= 35) {
-            moodBar.style.backgroundColor = '#dc3545'; // Red
-            moodLabel.innerText = 'Customer Mood: Frustrated';
-        } else {
-            moodBar.style.backgroundColor = '#ffc107'; // Yellow
-            moodLabel.innerText = 'Customer Mood: Neutral';
-        }
-    }
-}
-
-function initializeMoodMeter() {
-    if (!document.getElementById('mood-meter-container')) {
-        const meterHTML = `
-            <div id="mood-meter-container" class="mood-container">
-                <div id="dynamic-mood-bar" class="mood-bar"></div>
-                <div id="dynamic-mood-label" class="mood-label">Customer Mood: Neutral</div>
-            </div>
-        `;
-        chatWindow.insertAdjacentHTML('beforebegin', meterHTML);
-    }
-    currentMood = 50;
-    updateMoodMeter(0); 
-}
-
-function addMessage(text, sender) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${sender}-message`;
-    
-    if (sender === 'employee') {
-        messageDiv.style.backgroundColor = '#e8f5e9';
-        messageDiv.style.borderLeft = '4px solid #4caf50';
-        messageDiv.innerHTML = `<p><strong>You:</strong> ${text}</p>`;
-    } else {
-        messageDiv.innerHTML = `<p><strong>Customer:</strong> ${text}</p>`;
-    }
-    
-    chatWindow.appendChild(messageDiv);
-    chatWindow.scrollTop = chatWindow.scrollHeight; 
-}
-
-window.handleChoice = function(selectedOption, allOptions, clickedBtn) {
-    
-    if (selectedOption.nextStep === 'start') {
-        chatWindow.innerHTML = '';
-        removeFeedbackPanel();
-        loadStep('start');
-        return;
-    }
-
-    addMessage(selectedOption.text, 'employee');
-
-    if (selectedOption.moodChange) {
-        updateMoodMeter(selectedOption.moodChange);
-    }
-
-    const buttons = buttonGrid.querySelectorAll('button');
-    buttons.forEach(btn => btn.disabled = true);
-
-    if (selectedOption.isOptimal) {
-        clickedBtn.style.backgroundColor = '#d4edda';
-        clickedBtn.style.borderColor = '#28a745';
-        clickedBtn.style.color = '#155724';
-        clickedBtn.innerHTML = `✅ ${selectedOption.text}`;
-    } else {
-        clickedBtn.style.backgroundColor = '#f8d7da';
-        clickedBtn.style.borderColor = '#dc3545';
-        clickedBtn.style.color = '#721c24';
-        clickedBtn.innerHTML = `❌ ${selectedOption.text}`;
-
-        const correctIndex = allOptions.findIndex(opt => opt.isOptimal);
-        if (correctIndex !== -1) {
-            buttons[correctIndex].style.backgroundColor = '#d4edda';
-            buttons[correctIndex].style.borderColor = '#28a745';
-            buttons[correctIndex].style.color = '#155724';
-            buttons[correctIndex].innerHTML = `✅ ${allOptions[correctIndex].text}`;
-        }
-    }
-
-    showFeedbackPanel(selectedOption);
-};
-
-function showFeedbackPanel(selectedOption) {
-    removeFeedbackPanel(); 
-
-    const panel = document.createElement('div');
-    panel.id = 'active-feedback'; 
-    
-    let imageHTML = '';
-    if (selectedOption.imageUrl) {
-        imageHTML = `<img src="${selectedOption.imageUrl}" class="feedback-image" alt="Scenario outcome">`;
-    }
-    
-    if (selectedOption.isOptimal) {
-        panel.className = 'feedback-panel panel-correct';
-        panel.innerHTML = `
-            ${imageHTML}
-            <h4>✅ Correct Choice</h4>
-            <p>${selectedOption.feedback}</p>
-        `;
-    } else {
-        panel.className = 'feedback-panel panel-incorrect';
-        panel.innerHTML = `
-            ${imageHTML}
-            <h4>❌ Incorrect Choice</h4>
-            <p>${selectedOption.feedback}</p>
-        `;
-    }
-
-    const continueBtn = document.createElement('button');
-    continueBtn.className = 'continue-btn';
-    continueBtn.innerText = 'Continue ➔';
-    continueBtn.onclick = () => {
-        removeFeedbackPanel();
-        loadStep(selectedOption.nextStep);
-    };
-
-    panel.appendChild(continueBtn);
-    controlsSection.appendChild(panel); 
-}
-
-function removeFeedbackPanel() {
-    const existingPanel = document.getElementById('active-feedback');
-    if (existingPanel) {
-        existingPanel.remove();
-    }
-}
-
-function loadStep(stepId) {
-    if (stepId === 'start') {
-        initializeMoodMeter();
-    }
-
-    const stepData = scenarioData[stepId];
-    addMessage(stepData.customerText, 'customer');
-
-    buttonGrid.innerHTML = ''; 
-    stepData.options.forEach(option => {
-        const btn = document.createElement('button');
-        btn.className = 'action-btn';
-        btn.innerText = option.text;
-        btn.onclick = (e) => handleChoice(option, stepData.options, e.target);
-        buttonGrid.appendChild(btn);
-    });
-}
-
-// Initialize
-chatWindow.innerHTML = ''; 
-loadStep('start');
