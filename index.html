@@ -3,33 +3,196 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Benetton L&D - The Difficult Return</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Benetton L&D Hub</title>
+    <link rel="stylesheet" href="hub-style.css">
 </head>
 <body>
-    <header class="app-header">
-        <h1>L&D Simulation Hub</h1>
-        <p>Scenario: The Difficult Return</p>
+    <header class="hub-header">
+        <h1>Benetton Training Hub</h1>
+        <p>Interactive Learning Simulations</p>
     </header>
 
-    <div style="max-width: 800px; margin: 15px auto; padding: 0 20px;">
-        <a href="hub.html" style="color: #00563f; text-decoration: none; font-weight: bold; padding: 8px 15px; border: 2px solid #00563f; border-radius: 5px; display: inline-block; background-color: white; transition: 0.2s;">
-            ← Back to Training Hub
-        </a>
+    <!-- ========================================== -->
+    <!-- VIEW 1: LOGGED OUT (Login Form)            -->
+    <!-- ========================================== -->
+    <div id="logged-out-view" style="max-width: 800px; margin: 20px auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #00563f;">
+        <h3 style="color: #333; margin-bottom: 10px;">🔒 Secure Employee Login</h3>
+        <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">Please log in with your credentials to access the training scenarios.</p>
+
+        <input type="email" id="email-input" placeholder="name@company.com" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;">
+        <input type="password" id="password-input" placeholder="Password" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;">
+
+        <button onclick="handleLogin()" style="padding: 10px 20px; background-color: #00563f; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+            Log In
+        </button>
+        <p id="auth-error" style="color: #dc3545; display: none; margin-top: 10px; font-weight: bold;"></p>
     </div>
 
-    <section class="simulation-screen">
-        <div class="chat-window" id="chat-window">
+    <!-- ========================================== -->
+    <!-- VIEW 2: LOGGED IN (Courses & Admin)        -->
+    <!-- ========================================== -->
+    <div id="logged-in-view" style="display: none;">
+        
+        <!-- Welcome Bar & Logout -->
+        <div style="background-color: white; padding: 15px 20px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <span style="color: #666;">Logged in as: </span>
+                <strong id="user-email-display" style="color: #00563f;"></strong>
             </div>
-    </section>
+            <button onclick="handleLogout()" style="padding: 6px 12px; background-color: #f8f9fa; color: #333; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">
+                Log Out
+            </button>
+        </div>
 
-    <section class="controls">
-        <h3>Choose your response:</h3>
-        <div class="button-grid"></div>
-    </section>
+        <!-- New Password Setup (Shows for first-time users) -->
+        <div id="set-password-section" style="padding: 15px 20px; background-color: #fff3cd; border-bottom: 1px solid #ffeeba;">
+            <p style="margin: 0 0 10px 0; color: #856404; font-size: 0.9rem;"><strong>First time here?</strong> Please set a permanent password for future logins.</p>
+            <input type="password" id="new-password-input" placeholder="Create a secure password" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-right: 10px; width: 250px;">
+            <button onclick="saveNewPassword()" style="padding: 8px 16px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                Save Password
+            </button>
+            <p id="password-msg" style="color: #28a745; display: none; margin-top: 5px; font-size: 0.85rem; font-weight: bold;">✓ Password saved successfully! You can use it to log in next time.</p>
+        </div>
 
+        <!-- Admin Controls (Hidden by default, shown via JS if Admin) -->
+        <div id="admin-controls" style="display: none; text-align: right; padding: 10px 20px; background-color: #f4f7f6; border-bottom: 1px solid #ddd;">
+            <a href="dashboard.html" id="admin-link" style="display: inline-block; background-color: #333; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px; font-size: 0.9rem; font-weight: bold;">
+                ⚙️ Admin Dashboard
+            </a>
+        </div>
+
+        <!-- The Courses -->
+        <main class="hub-container">
+            <section class="role-section">
+                <div class="role-title">
+                    <span class="icon">🛍️</span>
+                    <h2>Store Floor Associate</h2>
+                </div>
+
+                <div class="card-grid">
+                    <a href="index.html" class="training-card">
+                        <div class="card-content">
+                            <h3>The Difficult Return</h3>
+                            <p>Practice handling frustrated customers, verifying receipts, and maintaining brand standards.</p>
+                            <div class="tags">
+                                <span>😤 Empathy</span>
+                                <span>📋 Policy</span>
+                            </div>
+                        </div>
+                        <div class="card-arrow">→</div>
+                    </a>
+
+                    <a href="upsell.html" class="training-card">
+                        <div class="card-content">
+                            <h3>Suggestive Selling (Complete the Look)</h3>
+                            <p>Learn how to upsell accessories and match outfits without sounding pushy.</p>
+                            <div class="tags">
+                                <span>👕 Upselling</span>
+                                <span>📈 Sales</span>
+                            </div>
+                        </div>
+                        <div class="card-arrow">→</div>
+                    </a>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- SUPABASE AUTHENTICATION SCRIPT             -->
+    <!-- ========================================== -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js"></script> 
-    <script src="engine.js"></script> 
-</body>
-</html>
+    <script>
+        // 1. Initialize Supabase (Renamed to supabaseClient to avoid the naming clash!)
+        const dbUrl = 'https://lttebmghqpahjclycxau.supabase.co'; 
+        const dbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0dGVibWdocXBhaGpjbHljeGF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NDE4NDIsImV4cCI6MjA5MzAxNzg0Mn0.bwsArSg1M4GO0mJV83jttCikkeoXj_HL_yEsRlxptzE'; 
+        const supabaseClient = window.supabase.createClient(dbUrl, dbKey);
+
+        // 2. Actively listen for ANY login event (Magic Link OR Password)
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            if (session) {
+                // As soon as Supabase confirms you are logged in, show the courses!
+                showLoggedInView(session.user.email);
+            }
+        });
+
+        // 3. Handle Manual Login Button
+        async function handleLogin() {
+            const email = document.getElementById('email-input').value;
+            const password = document.getElementById('password-input').value;
+            const errorMsg = document.getElementById('auth-error');
+
+            errorMsg.style.display = 'none'; 
+
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
+
+            // If they type the wrong password, show the red error.
+            if (error) {
+                errorMsg.textContent = "❌ " + error.message;
+                errorMsg.style.display = 'block';
+            } else {
+                // Force the screen to change immediately on success
+                showLoggedInView(data.user.email);
+            }
+        }
+
+        // 4. Handle Logout
+        async function handleLogout() {
+            await supabaseClient.auth.signOut();
+            
+            // Revert to Logged Out View
+            document.getElementById('logged-in-view').style.display = 'none';
+            document.getElementById('admin-controls').style.display = 'none'; 
+            document.getElementById('logged-out-view').style.display = 'block';
+            document.getElementById('email-input').value = '';
+            document.getElementById('password-input').value = '';
+        }
+
+        // 5. UI Toggle & Dynamic Role Check
+        async function showLoggedInView(email) {
+            document.getElementById('logged-out-view').style.display = 'none';
+            document.getElementById('logged-in-view').style.display = 'block';
+            document.getElementById('user-email-display').textContent = email;
+
+            // Default state: hide the admin panel
+            document.getElementById('admin-controls').style.display = 'none';
+
+            // Ask Supabase what role this specific email has
+            const { data, error } = await supabaseClient
+                .from('user_roles')
+                .select('role')
+                .eq('email', email)
+                .single(); 
+
+            // Reveal the dashboard button only for admins
+            if (data && data.role === 'admin') {
+                document.getElementById('admin-controls').style.display = 'block';
+            }
+        }
+
+        // 6. Save New Password (For first-time users)
+        async function saveNewPassword() {
+            const newPassword = document.getElementById('new-password-input').value;
+            
+            if (newPassword.length < 6) {
+                alert("Password must be at least 6 characters long.");
+                return;
+            }
+
+            const { data, error } = await supabaseClient.auth.updateUser({
+                password: newPassword
+            });
+
+            if (error) {
+                alert("❌ Error saving password: " + error.message);
+            } else {
+                document.getElementById('password-msg').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('set-password-section').style.display = 'none';
+                }, 4000);
+            }
+        }
+    </script>

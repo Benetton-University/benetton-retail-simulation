@@ -20,12 +20,17 @@ const sessionData = {
 };
 
 // Immediately fetch the logged-in user's email
+// Immediately fetch the logged-in user's email and enforce security
 async function initializeUser() {
     const { data, error } = await sbClient.auth.getSession();
+    
     if (data.session) {
+        // SUCCESS: The user is real. Log their email and start the sim.
         sessionData.employeeEmail = data.session.user.email;
+        loadStep('start'); 
     } else {
-        sessionData.employeeEmail = "guest@benetton.com"; // Fallback for local testing
+        // SECURITY GATE: No session found. Send them to the login page immediately.
+        window.location.href = "index.html"; 
     }
 }
 initializeUser();
@@ -206,6 +211,3 @@ async function completeSimulation() {
     }
 }
 
-// Start the engine
-chatWindow.innerHTML = ''; 
-loadStep('start');
