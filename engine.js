@@ -20,19 +20,22 @@ const sessionData = {
 };
 
 // Immediately fetch the logged-in user's email
-// Immediately fetch the logged-in user's email and enforce security
+// Updated security initialization
 async function initializeUser() {
     const { data, error } = await sbClient.auth.getSession();
     
     if (data.session) {
-        // SUCCESS: The user is real. Log their email and start the sim.
+        // Logged in: set email and start the simulation
         sessionData.employeeEmail = data.session.user.email;
         loadStep('start'); 
     } else {
-        // SECURITY GATE: No session found. Send them to the login page immediately.
+        // Not logged in: redirect to login page immediately
         window.location.href = "index.html"; 
     }
 }
+
+// Clear the chat and trigger the security check
+chatWindow.innerHTML = ''; 
 initializeUser();
 
 // 3. UI VARIABLES
