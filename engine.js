@@ -8,9 +8,15 @@ const dbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJl
 
 const sbClient = window.supabase.createClient(dbUrl, dbKey);
 
-// 2. TELEMETRY CLIPBOARD
+// 2. UI VARIABLES (Moved to top to prevent ReferenceErrors)
+const chatWindow = document.getElementById('chat-window');
+const buttonGrid = document.querySelector('.button-grid');
+const controlsSection = document.querySelector('.controls'); 
+let currentMood = 50; 
+
+// 3. TELEMETRY CLIPBOARD
 const sessionData = {
-    employeeEmail: "", // Will be filled dynamically by Supabase Auth
+    employeeEmail: "", 
     moduleName: window.currentModuleName || "Unknown Module", 
     startTime: new Date().getTime(),
     endTime: null,
@@ -19,14 +25,14 @@ const sessionData = {
     choicesLog: [] 
 };
 
-// Immediately fetch the logged-in user's email
-// Updated security initialization
+// 4. SECURITY & INITIALIZATION
 async function initializeUser() {
     const { data, error } = await sbClient.auth.getSession();
     
     if (data.session) {
         // Logged in: set email and start the simulation
         sessionData.employeeEmail = data.session.user.email;
+        chatWindow.innerHTML = ''; // Safely clear now that chatWindow is defined
         loadStep('start'); 
     } else {
         // Not logged in: redirect to login page immediately
@@ -34,17 +40,10 @@ async function initializeUser() {
     }
 }
 
-// Clear the chat and trigger the security check
-chatWindow.innerHTML = ''; 
+// Trigger the security check
 initializeUser();
 
-// 3. UI VARIABLES
-const chatWindow = document.getElementById('chat-window');
-const buttonGrid = document.querySelector('.button-grid');
-const controlsSection = document.querySelector('.controls'); 
-let currentMood = 50; 
-
-// 4. MOOD METER LOGIC
+// 5. MOOD METER LOGIC
 function updateMoodMeter(change) {
     currentMood += change;
     if (currentMood > 100) currentMood = 100;
@@ -79,7 +78,7 @@ function initializeMoodMeter() {
     updateMoodMeter(0); 
 }
 
-// 5. CHAT LOGIC
+// 6. CHAT LOGIC
 function addMessage(text, sender) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${sender}-message`;
@@ -185,13 +184,11 @@ async function completeSimulation() {
     sessionData.endTime = new Date().getTime();
     sessionData.finalMoodScore = currentMood;
 
-    // Calculate a 0-100 score (starts at 100, deducts 20 per mistake)
     let finalScore = 100 - (sessionData.criticalErrors * 20);
     if (finalScore < 0) finalScore = 0;
 
     buttonGrid.innerHTML = '<p style="text-align:center; color:#666;">Saving your results to the HR Database...</p>';
 
-    // Pushing data mapped EXACTLY to your new column names
     const { data, error } = await sbClient
         .from('training_logs')
         .insert([{
@@ -209,8 +206,7 @@ async function completeSimulation() {
         buttonGrid.innerHTML = `
             <div style="text-align:center;">
                 <p style="color:green; font-weight:bold; margin-bottom: 15px;">✅ Success! Module Completed.</p>
-                <a href="hub.html" style="padding: 10px 20px; background: #00563f; color: white; text-decoration: none; border-radius: 5px; display: inline-block;">Return to Training Hub</a>
+                <a href="index.html" style="padding: 10px 20px; background: #00563f; color: white; text-decoration: none; border-radius: 5px; display: inline-block;">Return to Training Hub</a>
             </div>`;
     }
 }
-
