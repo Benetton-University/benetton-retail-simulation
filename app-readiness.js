@@ -58,7 +58,7 @@ const scenarioData = {
                 feedback: "Good eye. Maintaining the right ambience is key to a premium feel." 
             },
             { 
-                text: "The Pima Polo stack is a mess. I’ll re-fold them so the sizes are easy to find.", 
+                text: "The Polo stack is a mess. I’ll re-fold them so the sizes are easy to find.", 
                 nextStep: "step3", 
                 isOptimal: true, 
                 moodChange: 10, 
@@ -98,7 +98,7 @@ const scenarioData = {
                 feedback: "Don't hide! Follow the 10-Feet Rule with a smile to let them know you're available." 
             },
             { 
-                text: "I’ll walk right up to them—about 2 feet away—and ask if they need a specific size.", 
+                text: "I’ll walk right up to them and ask if they need a specific size.", 
                 nextStep: "step3Recovery", 
                 isOptimal: false, 
                 moodChange: -15, 
@@ -156,7 +156,7 @@ const scenarioData = {
 
     // Technical End Node
     endModule: {
-        customerText: "[Floor Manager]: Alright, go get 'em. Have a great shift!",
+        customerText: "[Floor Manager]: Have a great shift!",
         options: [] 
     }
 };
