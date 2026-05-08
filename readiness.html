@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benetton L&D - First Impression</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="app-header">
+        <h1>L&D Simulation Hub</h1>
+        <p>Scenario: First Impression & Readiness</p>
+    </header>
+
+    <div style="max-width: 800px; margin: 15px auto; padding: 0 20px;">
+        <a href="index.html" style="color: #00563f; text-decoration: none; font-weight: bold; padding: 8px 15px; border: 2px solid #00563f; border-radius: 5px; display: inline-block; background-color: white; transition: 0.2s;">
+            ← Back to Training Hub
+        </a>
+    </div>
+
+    <section class="simulation-screen">
+        <div class="chat-window" id="chat-window"></div>
+    </section>
+
+    <section class="controls">
+        <h3>Choose your response:</h3>
+        <div class="button-grid"></div>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app-readiness.js"></script> 
+    <script src="engine.js"></script> 
+</body>
+</html>
