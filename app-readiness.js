@@ -132,31 +132,83 @@ const scenarioData = {
         options: [
             { 
                 text: "Are you just looking today, or can I help you find something?", 
-                nextStep: "endModule", 
+                nextStep: "step4Recovery", 
                 isOptimal: false, 
                 moodChange: -10, 
                 feedback: "Careful—asking 'Are you just looking?' usually gets a 'Yes' and abruptly ends the conversation." 
             },
             { 
                 text: "Good afternoon! Welcome! Feel free to browse our new collection. I'm right here if you need help with a fit.", 
-                nextStep: "endModule", 
+                nextStep: "step5", 
                 isOptimal: true, 
                 moodChange: 15, 
                 feedback: "Exactly. That's polite, professional, and leaves the door open for them to talk to you." 
             },
             { 
                 text: "We have a 20% discount on those jackets if you buy them right now!", 
-                nextStep: "endModule", 
+                nextStep: "step4Recovery", 
                 isOptimal: false, 
                 moodChange: -15, 
                 feedback: "Too fast! You haven't even said hello yet. Focus on the relationship before the promotion." 
             }
         ]
     },
+    step4Recovery: {
+        customerText: "[Floor Manager]: That approach either closes the door or feels too pushy. Let's try a warm, open greeting instead.",
+        options: [
+            { 
+                text: "I'll give a friendly 'Good afternoon,' let them browse, and mention I'm here if they need help.", 
+                nextStep: "step5", 
+                isOptimal: true, 
+                moodChange: 5, 
+                feedback: "Good recovery. An open greeting builds trust." 
+            }
+        ]
+    },
+
+    // STAGE 5: The Discovery / Transition
+    step5: {
+        customerText: "[Floor Manager]: They smiled back and said, 'Actually, I'm looking for a birthday gift for my brother.' What is your immediate next move to start the consultation?",
+        options: [
+            { 
+                text: "Point to the men's section and tell them to let me know if they need to check any sizes.", 
+                nextStep: "step5Recovery", 
+                isOptimal: false, 
+                moodChange: -10, 
+                feedback: "Too passive! You have a golden opportunity to help them shop. Don't just point and walk away." 
+            },
+            { 
+                text: "Ask an open-ended discovery question, like 'What is his usual style or favorite color?'", 
+                nextStep: "endModule", 
+                isOptimal: true, 
+                moodChange: 20, 
+                feedback: "Masterful. You've successfully transitioned from a greeting into a full sales consultation." 
+            },
+            { 
+                text: "Immediately grab our most expensive leather jacket and tell them it's the absolute perfect gift.", 
+                nextStep: "step5Recovery", 
+                isOptimal: false, 
+                moodChange: -15, 
+                feedback: "Too aggressive. You don't know anything about their brother yet. You must discover their needs first." 
+            }
+        ]
+    },
+    step5Recovery: {
+        customerText: "[Floor Manager]: That's either too passive or too aggressive. We need to guide them naturally by understanding their specific needs first.",
+        options: [
+            { 
+                text: "I'll pivot and ask some open-ended questions to discover what their brother likes.", 
+                nextStep: "endModule", 
+                isOptimal: true, 
+                moodChange: 10, 
+                feedback: "Perfect. Discovery is the key to suggestive selling." 
+            }
+        ]
+    },
 
     // Technical End Node
     endModule: {
-        customerText: "[Floor Manager]: Have a great shift!",
+        customerText: "[Floor Manager]: Outstanding work. You've set the floor up perfectly, welcomed the customer warmly, and seamlessly started a great consultation. Go get 'em. Have a great shift!",
         options: [] 
     }
 };
