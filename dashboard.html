@@ -33,16 +33,97 @@
         .chart-box { background: white; flex: 1; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); height: 350px; }
         .chart-box h3 { text-align: center; margin-bottom: 15px; font-size: 1.1rem; color: #444; }
         .canvas-container { position: relative; height: 280px; width: 100%; }
+        /* The Hamburger Button */
+.hamburger-btn {
+    font-size: 1.8rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #00563f;
+    padding: 5px;
+    transition: 0.2s;
+}
+.hamburger-btn:hover { color: #333; }
+
+/* The Slide-Out Menu */
+.slide-menu {
+    position: fixed;
+    top: 0;
+    left: -280px; /* Hides it entirely off-screen to the left */
+    width: 250px;
+    height: 100vh;
+    background-color: #00563f; /* Benetton Corporate Green */
+    padding: 20px;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+    transition: left 0.3s ease-in-out; /* The sliding animation */
+    z-index: 1000;
+}
+
+/* When the menu is toggled 'open' */
+.slide-menu.active {
+    left: 0; 
+}
+
+/* Menu Links */
+.menu-link {
+    display: block;
+    color: white;
+    text-decoration: none;
+    padding: 15px 10px;
+    font-size: 1.1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    transition: 0.2s;
+}
+.menu-link:hover { background-color: rgba(255,255,255,0.1); }
+
+/* The Close 'X' Button inside the menu */
+.close-btn {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+}
+
+/* The Dark Background Overlay */
+.overlay {
+    display: none; /* Hidden by default */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.4);
+    z-index: 999;
+}
+/* When overlay is active */
+.overlay.active {
+    display: block;
+}
     </style>
 </head>
 <body>
 
-    <nav class="sidebar">
-        <h2>Benetton Training Hub</h2>
-        <a href="#" class="nav-link active">📊 Analytics Dashboard</a>
-        <a href="#" class="nav-link">👥 Learner Directory</a>
-        <a href="hub.html" class="nav-link">⬅️ Back to Hub</a>
+<body>
+    <header style="background: white; padding: 15px 20px; display: flex; align-items: center; border-bottom: 2px solid #00563f;">
+        <button id="menu-toggle" class="hamburger-btn">☰</button>
+        <h2 style="margin: 0 0 0 15px; color: #00563f;">Benetton Training Hub</h2>
+    </header>
+
+    <nav id="sidebar" class="slide-menu">
+        <button id="close-menu" class="close-btn">&times;</button>
+        <br><br>
+        <a href="#" class="menu-link">📊 Analytics Dashboard</a>
+        <a href="#" class="menu-link">👥 Learner Directory</a>
+        <a href="index.html" class="menu-link">⬅️ Back to Hub</a>
     </nav>
+
+    <div id="sidebar-overlay" class="overlay"></div>
+
+    <main class="dashboard-content">
 
     <main class="main-content">
         <div class="header">
@@ -207,6 +288,23 @@
             // Start the process
             fetchAnalytics();
         });
+    </script>
+    </main>
+
+    <script>
+        const menuToggle = document.getElementById('menu-toggle');
+        const closeMenu = document.getElementById('close-menu');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+
+        menuToggle.addEventListener('click', toggleSidebar);
+        closeMenu.addEventListener('click', toggleSidebar);
+        overlay.addEventListener('click', toggleSidebar);
     </script>
 </body>
 </html>
