@@ -5,125 +5,131 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Benetton Training Hub - Analytics</title>
     <style>
-        /* Base Reset & Layout matching your screenshot */
+        /* Base Reset & Layout */
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { display: flex; background-color: #f4f7f6; height: 100vh; color: #333; }
+        body { background-color: #f4f7f6; color: #333; overflow-x: hidden; }
         
-        /* The Green Sidebar */
-        .sidebar { width: 250px; background-color: #00563f; color: white; display: flex; flex-direction: column; padding: 20px 0; }
-        .sidebar h2 { font-size: 1.2rem; padding: 0 20px 20px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; text-align: center;}
-        .nav-link { padding: 15px 20px; color: white; text-decoration: none; font-weight: 500; display: block; opacity: 0.8; transition: 0.2s; }
-        .nav-link:hover, .nav-link.active { opacity: 1; background-color: rgba(255,255,255,0.1); border-left: 4px solid #fff; }
-        
-        /* Main Content Area */
-        .main-content { flex: 1; padding: 40px; overflow-y: auto; }
+        /* 1. Floating Hamburger Button */
+        .floating-hamburger {
+            position: fixed; 
+            top: 20px;
+            left: 20px;
+            font-size: 1.8rem;
+            background: white;
+            border: 2px solid #00563f;
+            color: #00563f;
+            border-radius: 8px;
+            cursor: pointer;
+            z-index: 990; /* Keeps it below the open menu but above charts */
+            padding: 5px 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: 0.2s;
+        }
+        .floating-hamburger:hover {
+            background: #00563f;
+            color: white;
+        }
+
+        /* 2. The Slide-Out Menu */
+        .slide-menu {
+            position: fixed;
+            top: 0;
+            left: -280px; /* Hides it off-screen to the left */
+            width: 250px;
+            height: 100vh;
+            background-color: #00563f; /* Benetton Corporate Green */
+            padding: 20px;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+            transition: left 0.3s ease-in-out; /* The sliding animation */
+            z-index: 1000;
+        }
+        .slide-menu.active {
+            left: 0; 
+        }
+
+        /* Menu Content Styling */
+        .slide-menu h3 { color: white; margin: 50px 0 20px 10px; font-size: 1.2rem; }
+        .menu-link {
+            display: block;
+            color: white;
+            text-decoration: none;
+            padding: 15px 10px;
+            font-size: 1.1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            transition: 0.2s;
+        }
+        .menu-link:hover { background-color: rgba(255,255,255,0.1); border-left: 4px solid #fff; }
+
+        /* The Close 'X' Button inside the menu */
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+        }
+
+        /* 3. The Dark Background Overlay */
+        .overlay {
+            display: none; 
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.4);
+            z-index: 999;
+        }
+        .overlay.active {
+            display: block;
+        }
+
+        /* Main Content Area (Full Width Now) */
+        .main-content { 
+            width: 100%; 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            padding: 80px 30px 40px 30px; /* 80px top padding clears the floating button */
+        }
         .header { margin-bottom: 30px; }
         .header h1 { color: #333; font-size: 2rem; margin-bottom: 5px; }
         .header p { color: #666; }
 
         /* Top Cards */
-        .cards-container { display: flex; gap: 20px; margin-bottom: 30px; }
-        .card { background: white; flex: 1; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #00563f; }
+        .cards-container { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 30px; }
+        .card { background: white; flex: 1; min-width: 250px; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #00563f; }
         .card h3 { font-size: 0.85rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
         .card .value { font-size: 2rem; font-weight: bold; color: #333; }
         .card .sub-text { font-size: 0.9rem; color: #dc3545; font-weight: bold; margin-top: 5px;}
 
         /* Charts Area */
-        .charts-container { display: flex; gap: 20px; }
-        .chart-box { background: white; flex: 1; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); height: 350px; }
+        .charts-container { display: flex; flex-wrap: wrap; gap: 20px; }
+        .chart-box { background: white; flex: 1; min-width: 300px; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); height: 350px; }
         .chart-box h3 { text-align: center; margin-bottom: 15px; font-size: 1.1rem; color: #444; }
         .canvas-container { position: relative; height: 280px; width: 100%; }
-        /* The Hamburger Button */
-.hamburger-btn {
-    font-size: 1.8rem;
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: #00563f;
-    padding: 5px;
-    transition: 0.2s;
-}
-.hamburger-btn:hover { color: #333; }
-
-/* The Slide-Out Menu */
-.slide-menu {
-    position: fixed;
-    top: 0;
-    left: -280px; /* Hides it entirely off-screen to the left */
-    width: 250px;
-    height: 100vh;
-    background-color: #00563f; /* Benetton Corporate Green */
-    padding: 20px;
-    box-shadow: 2px 0 10px rgba(0,0,0,0.2);
-    transition: left 0.3s ease-in-out; /* The sliding animation */
-    z-index: 1000;
-}
-
-/* When the menu is toggled 'open' */
-.slide-menu.active {
-    left: 0; 
-}
-
-/* Menu Links */
-.menu-link {
-    display: block;
-    color: white;
-    text-decoration: none;
-    padding: 15px 10px;
-    font-size: 1.1rem;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-    transition: 0.2s;
-}
-.menu-link:hover { background-color: rgba(255,255,255,0.1); }
-
-/* The Close 'X' Button inside the menu */
-.close-btn {
-    position: absolute;
-    top: 15px;
-    right: 20px;
-    background: none;
-    border: none;
-    color: white;
-    font-size: 2rem;
-    cursor: pointer;
-}
-
-/* The Dark Background Overlay */
-.overlay {
-    display: none; /* Hidden by default */
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0,0,0,0.4);
-    z-index: 999;
-}
-/* When overlay is active */
-.overlay.active {
-    display: block;
-}
+        
+        /* Mobile Adjustments */
+        @media (max-width: 768px) {
+            .cards-container, .charts-container { flex-direction: column; }
+        }
     </style>
 </head>
 <body>
 
-<body>
-    <header style="background: white; padding: 15px 20px; display: flex; align-items: center; border-bottom: 2px solid #00563f;">
-        <button id="menu-toggle" class="hamburger-btn">☰</button>
-        <h2 style="margin: 0 0 0 15px; color: #00563f;">Benetton Training Hub</h2>
-    </header>
+    <button id="menu-toggle" class="floating-hamburger">☰</button>
 
     <nav id="sidebar" class="slide-menu">
         <button id="close-menu" class="close-btn">&times;</button>
-        <br><br>
+        <h3>Benetton Training Hub</h3>
         <a href="#" class="menu-link">📊 Analytics Dashboard</a>
         <a href="#" class="menu-link">👥 Learner Directory</a>
         <a href="index.html" class="menu-link">⬅️ Back to Hub</a>
     </nav>
 
     <div id="sidebar-overlay" class="overlay"></div>
-
-    <main class="dashboard-content">
 
     <main class="main-content">
         <div class="header">
@@ -165,39 +171,30 @@
         </div>
     </main>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
-        // Wait for the entire page and external libraries to load first
         document.addEventListener('DOMContentLoaded', () => {
-            console.log("Page loaded. Initializing dashboard...");
-            
-            // 1. Connect to Supabase
             const dbUrl = 'https://lttebmghqpahjclycxau.supabase.co'; 
             const dbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0dGVibWdocXBhaGpjbHljeGF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NDE4NDIsImV4cCI6MjA5MzAxNzg0Mn0.bwsArSg1M4GO0mJV83jttCikkeoXj_HL_yEsRlxptzE'; 
             const supabase = window.supabase.createClient(dbUrl, dbKey);
 
             async function fetchAnalytics() {
                 try {
-                    console.log("Fetching data from Supabase...");
                     const { data, error } = await supabase.from('training_logs').select('*');
                     
                     if (error) throw error;
 
                     if (!data || data.length === 0) {
-                        console.log("No data found in training_logs.");
                         document.getElementById('risk-module').innerText = "No Data Yet";
                         document.getElementById('mood-module').innerText = "No Data Yet";
                         return;
                     }
 
-                    console.log(`Found ${data.length} logs! Processing...`);
                     document.getElementById('total-sims').innerText = data.length;
 
-                    // 2. Data Processing Engine
                     let moduleStats = {};
-
                     data.forEach(log => {
                         let mod = log.module_name || "Unknown Module";
                         if (!moduleStats[mod]) {
@@ -214,11 +211,9 @@
 
                     let highestRiskModule = "None";
                     let maxAvgMistakes = -1;
-
                     let lowestMoodModule = "None";
                     let minAvgMood = 101;
 
-                    // 3. Calculate Averages
                     for (const [moduleName, stats] of Object.entries(moduleStats)) {
                         let avgMistakes = parseFloat((stats.totalMistakes / stats.runs).toFixed(1));
                         let avgMood = Math.round(stats.totalMood / stats.runs);
@@ -238,14 +233,12 @@
                         }
                     }
 
-                    // 4. Update the Strategic Cards
                     document.getElementById('risk-module').innerText = highestRiskModule;
                     document.getElementById('risk-stat').innerText = `${maxAvgMistakes} errors per run`;
                     
                     document.getElementById('mood-module').innerText = lowestMoodModule;
                     document.getElementById('mood-stat').innerText = `${minAvgMood}% avg mood score`;
 
-                    console.log("Drawing charts...");
                     drawCharts(labels, avgMistakesData, avgMoodData);
 
                 } catch (err) {
@@ -285,11 +278,9 @@
                 });
             }
 
-            // Start the process
             fetchAnalytics();
         });
     </script>
-    </main>
 
     <script>
         const menuToggle = document.getElementById('menu-toggle');
