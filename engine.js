@@ -98,9 +98,9 @@ function updateMoodMeter(change) {
 function initializeMoodMeter() {
     if (!document.getElementById('mood-meter-container')) {
         const meterHTML = `
+            <div id="dynamic-mood-label" class="mood-label" style="font-weight: bold; color: #555; margin-bottom: 8px; font-size: 0.95rem;">Customer Mood: Neutral</div>
             <div id="mood-meter-container" class="mood-container">
                 <div id="dynamic-mood-bar" class="mood-bar"></div>
-                <div id="dynamic-mood-label" class="mood-label">Customer Mood: Neutral</div>
             </div>
         `;
         chatWindow.insertAdjacentHTML('beforebegin', meterHTML);
