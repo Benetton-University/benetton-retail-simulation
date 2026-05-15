@@ -8,9 +8,6 @@ const dbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJl
 
 const sbClient = window.supabase.createClient(dbUrl, dbKey);
 
-// [NEW] Global variable to hold the downloaded scenario
-let scenarioData = {}; 
-
 // 2. UI VARIABLES 
 const chatWindow = document.getElementById('chat-window');
 const buttonGrid = document.querySelector('.button-grid');
@@ -33,23 +30,19 @@ async function initializeUser() {
     const { data, error } = await sbClient.auth.getSession();
     
     if (data.session) {
-        // Logged in: set email and fetch the module from the cloud
         sessionData.employeeEmail = data.session.user.email;
         chatWindow.innerHTML = ''; 
         fetchModuleFromCloud(); 
     } else {
-        // Not logged in: redirect to login page immediately
         window.location.href = "index.html"; 
     }
 }
 
-// [NEW] CLOUD FETCH LOGIC
+// CLOUD FETCH LOGIC
 async function fetchModuleFromCloud() {
     try {
-        // Show loading state
         chatWindow.innerHTML = '<p style="text-align:center; color:#666; margin-top: 20px;">Loading training module from the cloud...</p>';
 
-        // Query the module_content table for this specific module
         const { data, error } = await sbClient
             .from('module_content')
             .select('scenario_data')
@@ -57,11 +50,10 @@ async function fetchModuleFromCloud() {
 
         if (error) throw error;
 
-        // Check if we got the data, then start the engine
         if (data && data.length > 0) {
             scenarioData = data[0].scenario_data; 
-            chatWindow.innerHTML = ''; // Clear loading text
-            loadStep('start'); // Kick off the simulation!
+            chatWindow.innerHTML = ''; 
+            loadStep('start'); 
         } else {
             chatWindow.innerHTML = '<p style="color:red; text-align:center; margin-top: 20px;">Error: Module not found in the database.</p>';
         }
@@ -71,10 +63,9 @@ async function fetchModuleFromCloud() {
     }
 }
 
-// Trigger the security check on page load
 initializeUser();
 
-// 5. MOOD METER LOGIC
+// 5. MOOD METER LOGIC (With Hardcoded Styling for Bulletproofing)
 function updateMoodMeter(change) {
     currentMood += change;
     if (currentMood > 100) currentMood = 100;
@@ -83,7 +74,7 @@ function updateMoodMeter(change) {
     const moodBar = document.getElementById('dynamic-mood-bar');
     const moodLabel = document.getElementById('dynamic-mood-label');
     
-    if (moodBar) {
+    if (moodBar && moodLabel) {
         moodBar.style.width = currentMood + '%';
         if (currentMood >= 70) {
             moodBar.style.backgroundColor = '#28a745'; moodLabel.innerText = 'Customer Mood: Positive';
@@ -98,9 +89,9 @@ function updateMoodMeter(change) {
 function initializeMoodMeter() {
     if (!document.getElementById('mood-meter-container')) {
         const meterHTML = `
-            <div id="dynamic-mood-label" class="mood-label" style="font-weight: bold; color: #555; margin-bottom: 8px; font-size: 0.95rem;">Customer Mood: Neutral</div>
-            <div id="mood-meter-container" class="mood-container">
-                <div id="dynamic-mood-bar" class="mood-bar"></div>
+            <div id="dynamic-mood-label" style="font-size: 0.95rem; font-weight: bold; color: #555; margin-bottom: 8px; display: block;">Customer Mood: Neutral</div>
+            <div id="mood-meter-container" style="background: #e9ecef; height: 12px; border-radius: 6px; margin-bottom: 20px; overflow: hidden; width: 100%; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
+                <div id="dynamic-mood-bar" style="height: 100%; width: 50%; background: #ffc107; transition: width 0.5s ease-in-out, background-color 0.5s ease;"></div>
             </div>
         `;
         chatWindow.insertAdjacentHTML('beforebegin', meterHTML);
@@ -132,11 +123,7 @@ window.handleChoice = function(selectedOption, allOptions, clickedBtn) {
         return;
     }
 
-    if (selectedOption.nextStep === 'endModule') {
-        completeSimulation();
-        return;
-    }
-
+    // WE REMOVED THE EARLY EXIT HERE SO IT ALWAYS PRINTS THE CHAT BUBBLE
     addMessage(selectedOption.text, 'employee');
 
     sessionData.choicesLog.push({
@@ -164,6 +151,8 @@ window.handleChoice = function(selectedOption, allOptions, clickedBtn) {
             buttons[correctIndex].style.backgroundColor = '#d4edda'; buttons[correctIndex].style.borderColor = '#28a745'; buttons[correctIndex].style.color = '#155724'; buttons[correctIndex].innerHTML = `✅ ${allOptions[correctIndex].text}`;
         }
     }
+    
+    // Always show the feedback panel
     showFeedbackPanel(selectedOption);
 };
 
@@ -171,21 +160,30 @@ function showFeedbackPanel(selectedOption) {
     removeFeedbackPanel(); 
     const panel = document.createElement('div');
     panel.id = 'active-feedback'; 
-    let imageHTML = selectedOption.imageUrl ? `<img src="${selectedOption.imageUrl}" class="feedback-image" alt="Scenario outcome">` : '';
+    panel.className = selectedOption.isOptimal ? 'feedback-panel panel-correct' : 'feedback-panel panel-incorrect';
     
-    if (selectedOption.isOptimal) {
-        panel.className = 'feedback-panel panel-correct';
-        panel.innerHTML = `${imageHTML} <h4>✅ Correct Choice</h4> <p>${selectedOption.feedback}</p>`;
-    } else {
-        panel.className = 'feedback-panel panel-incorrect';
-        panel.innerHTML = `${imageHTML} <h4>❌ Incorrect Choice</h4> <p>${selectedOption.feedback}</p>`;
-    }
+    let icon = selectedOption.isOptimal ? '✅ Correct Choice' : '❌ Incorrect Choice';
+    panel.innerHTML = `<h4 style="margin-top:0; margin-bottom:10px;">${icon}</h4> <p style="margin-bottom:15px;">${selectedOption.feedback}</p>`;
 
-    const continueBtn = document.createElement('button');
-    continueBtn.className = 'continue-btn';
-    continueBtn.innerText = 'Continue ➔';
-    continueBtn.onclick = () => { removeFeedbackPanel(); loadStep(selectedOption.nextStep); };
-    panel.appendChild(continueBtn);
+    const actionBtn = document.createElement('button');
+    actionBtn.className = 'continue-btn';
+    
+    // NEW LOGIC: Check if this was the last step
+    if (selectedOption.nextStep === 'endModule') {
+        actionBtn.innerText = 'Finish Simulation ✔';
+        actionBtn.onclick = () => { 
+            removeFeedbackPanel(); 
+            completeSimulation(); // Only exit the simulation AFTER they click Finish
+        };
+    } else {
+        actionBtn.innerText = 'Continue ➔';
+        actionBtn.onclick = () => { 
+            removeFeedbackPanel(); 
+            loadStep(selectedOption.nextStep); 
+        };
+    }
+    
+    panel.appendChild(actionBtn);
     controlsSection.appendChild(panel); 
 }
 
@@ -236,8 +234,8 @@ async function completeSimulation() {
     } else {
         buttonGrid.innerHTML = `
             <div style="text-align:center;">
-                <p style="color:green; font-weight:bold; margin-bottom: 15px;">✅ Success! Module Completed.</p>
-                <a href="index.html" style="padding: 10px 20px; background: #00563f; color: white; text-decoration: none; border-radius: 5px; display: inline-block;">Return to Training Hub</a>
+                <p style="color:green; font-weight:bold; margin-bottom: 15px; font-size: 1.2rem;">✅ Success! Module Completed.</p>
+                <a href="index.html" style="padding: 12px 24px; background: #00563f; color: white; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Return to Training Hub</a>
             </div>`;
     }
 }
