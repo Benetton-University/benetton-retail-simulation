@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benetton Training Hub - Add Module</title>
+    <style>
+        /* Base Reset & Layout */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f4f7f6; color: #333; overflow-x: hidden; }
+        
+        /* Navigation (Unchanged) */
+        .floating-hamburger { position: fixed; top: 20px; left: 20px; font-size: 1.8rem; background: white; border: 2px solid #00563f; color: #00563f; border-radius: 8px; cursor: pointer; z-index: 990; padding: 5px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .slide-menu { position: fixed; top: 0; left: -280px; width: 250px; height: 100vh; background-color: #00563f; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.2); transition: left 0.3s ease-in-out; z-index: 1000; }
+        .slide-menu.active { left: 0; }
+        .slide-menu h3 { color: white; margin: 50px 0 20px 10px; font-size: 1.2rem; }
+        .menu-link { display: block; color: white; text-decoration: none; padding: 15px 10px; font-size: 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .menu-link:hover { background-color: rgba(255,255,255,0.1); border-left: 4px solid #fff; }
+        .close-btn { position: absolute; top: 15px; right: 20px; background: none; border: none; color: white; font-size: 2rem; cursor: pointer; }
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 999; }
+        .overlay.active { display: block; }
+
+        /* Form Container Styling */
+        .main-content { width: 100%; max-width: 900px; margin: 0 auto; padding: 80px 30px 40px 30px; }
+        .header { margin-bottom: 30px; }
+        .header h1 { color: #333; font-size: 2rem; margin-bottom: 5px; }
+        .header p { color: #666; }
+
+        .form-card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 5px solid #00563f; margin-bottom: 20px;}
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 8px; color: #444; }
+        .form-group input, .form-group textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
+        .form-group input:focus, .form-group textarea:focus { outline: none; border-color: #00563f; box-shadow: 0 0 5px rgba(0,86,63,0.3); }
+        
+        /* Node Builder Styling */
+        .step-card { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #17a2b8; }
+        .step-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-weight: bold; color: #00563f; }
+        .remove-btn { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+        
+        .option-card { background: white; border: 1px dashed #ccc; border-radius: 4px; padding: 15px; margin-top: 15px; margin-left: 30px; position: relative; }
+        .option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .option-grid .full-width { grid-column: span 2; }
+        
+        .add-btn { background-color: #e9ecef; color: #333; border: 1px solid #ccc; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .add-btn:hover { background-color: #dee2e6; }
+        
+        .submit-btn { background-color: #00563f; color: white; padding: 15px 24px; font-size: 1.2rem; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; width: 100%; transition: 0.2s; margin-top: 20px; }
+        .submit-btn:hover { background-color: #003d2c; }
+        
+        #status-message { margin-top: 15px; font-weight: bold; text-align: center; display: none; padding: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <button id="menu-toggle" class="floating-hamburger">☰</button>
+    <nav id="sidebar" class="slide-menu">
+        <button id="close-menu" class="close-btn">&times;</button>
+        <h3>Benetton Training Hub</h3>
+        <a href="dashboard.html" class="menu-link">📊 Analytics Dashboard</a>
+        <a href="module-builder.html" class="menu-link" style="background-color: rgba(255,255,255,0.1); border-left: 4px solid #fff;">➕ Add Modules</a>
+        <a href="index.html" class="menu-link">⬅️ Back to Hub</a>
+    </nav>
+    <div id="sidebar-overlay" class="overlay"></div>
+
+    <main class="main-content">
+        <div class="header">
+            <h1>Create New Assessment</h1>
+            <p>Publish interactive training scenarios using the visual builder.</p>
+        </div>
+
+        <div class="form-card">
+            <div class="form-group">
+                <label>Assessment Name*</label>
+                <input type="text" id="module-name" placeholder="e.g., Suggestive Selling (Holiday Campaign)" required>
+            </div>
+            <div class="form-group">
+                <label>Description*</label>
+                <textarea id="module-description" rows="3" placeholder="Enter a brief summary for the learner..." required></textarea>
+            </div>
+            <div class="form-group">
+                <label>Tags</label>
+                <input type="text" id="module-tags" placeholder="e.g., Upselling, Customer Service, Policy">
+            </div>
+        </div>
+
+        <div class="form-card" style="border-top-color: #17a2b8;">
+            <h2 style="margin-bottom: 20px; color: #333;">Scenario Dialogue Builder</h2>
+            <p style="color: #666; margin-bottom: 20px; font-size: 0.9rem;">The first step must always have the ID <strong>start</strong>.</p>
+            
+            <div id="steps-container">
+                </div>
+
+            <button class="add-btn" onclick="addStep()">➕ Add New Step</button>
+        </div>
+
+        <button class="submit-btn" onclick="publishModule()">Publish Module to Cloud</button>
+        <div id="status-message"></div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // --- 1. SUPABASE INIT ---
+        const dbUrl = 'https://lttebmghqpahjclycxau.supabase.co'; 
+        const dbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0dGVibWdocXBhaGpjbHljeGF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NDE4NDIsImV4cCI6MjA5MzAxNzg0Mn0.bwsArSg1M4GO0mJV83jttCikkeoXj_HL_yEsRlxptzE'; 
+        const supabase = window.supabase.createClient(dbUrl, dbKey);
+
+        let stepCount = 0;
+
+        // --- 2. DYNAMIC UI FUNCTIONS ---
+        function addStep(isStart = false) {
+            stepCount++;
+            const stepIdVal = isStart ? 'start' : `step_${stepCount}`;
+            
+            const stepHtml = `
+                <div class="step-card" id="step-node-${stepCount}">
+                    <div class="step-header">
+                        <span>Dialogue Step</span>
+                        ${!isStart ? `<button class="remove-btn" onclick="this.parentElement.parentElement.remove()">Remove Step</button>` : `<span style="color:#666; font-size:0.8rem;">(Starting Node)</span>`}
+                    </div>
+                    <div class="form-group">
+                        <label>Step ID (Used to link options here)</label>
+                        <input type="text" class="step-id" value="${stepIdVal}" ${isStart ? 'readonly' : ''} placeholder="e.g., shoeResponse">
+                    </div>
+                    <div class="form-group">
+                        <label>Customer/Manager Dialogue Text</label>
+                        <textarea class="customer-text" rows="2" placeholder="What does the customer say?"></textarea>
+                    </div>
+                    
+                    <div class="options-container"></div>
+                    <button class="add-btn" onclick="addOption(this)">↳ Add Employee Option</button>
+                </div>
+            `;
+            document.getElementById('steps-container').insertAdjacentHTML('beforeend', stepHtml);
+        }
+
+        function addOption(btnElement) {
+            const optionsContainer = btnElement.previousElementSibling;
+            const optionHtml = `
+                <div class="option-card">
+                    <button class="remove-btn" style="position: absolute; top: 10px; right: 10px;" onclick="this.parentElement.remove()">X</button>
+                    <div class="option-grid">
+                        <div class="form-group full-width">
+                            <label>Employee Response Text</label>
+                            <input type="text" class="opt-text" placeholder="What can the employee say?">
+                        </div>
+                        <div class="form-group">
+                            <label>Next Step ID</label>
+                            <input type="text" class="opt-next" placeholder="e.g., endModule, or step_2">
+                        </div>
+                        <div class="form-group">
+                            <label>Mood Change (-100 to +100)</label>
+                            <input type="number" class="opt-mood" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label style="display:flex; align-items:center; gap: 10px; margin-top: 30px;">
+                                <input type="checkbox" class="opt-optimal" style="width: 20px; height: 20px;">
+                                Is this the correct/optimal choice?
+                            </label>
+                        </div>
+                        <div class="form-group full-width">
+                            <label>Feedback provided to employee</label>
+                            <input type="text" class="opt-feedback" placeholder="e.g., Great job de-escalating the situation.">
+                        </div>
+                    </div>
+                </div>
+            `;
+            optionsContainer.insertAdjacentHTML('beforeend', optionHtml);
+        }
+
+        // Initialize the first required 'start' step when page loads
+        window.onload = () => addStep(true);
+
+        // --- 3. JSON COMPILER & PUBLISHER ---
+        async function publishModule() {
+            const name = document.getElementById('module-name').value.trim();
+            const desc = document.getElementById('module-description').value.trim();
+            const tags = document.getElementById('module-tags').value.trim();
+            const statusBox = document.getElementById('status-message');
+
+            statusBox.style.display = 'block';
+            statusBox.style.backgroundColor = '#f8d7da';
+            statusBox.style.color = '#721c24';
+
+            if (!name || !desc) {
+                statusBox.innerText = '❌ Please provide an Assessment Name and Description.';
+                return;
+            }
+
+            // The Magic: Compile the UI inputs into pure JSON
+            let scenarioJson = {};
+            const steps = document.querySelectorAll('.step-card');
+            
+            steps.forEach(step => {
+                const stepId = step.querySelector('.step-id').value.trim();
+                const customerText = step.querySelector('.customer-text').value.trim();
+                let optionsArray = [];
+
+                step.querySelectorAll('.option-card').forEach(opt => {
+                    optionsArray.push({
+                        text: opt.querySelector('.opt-text').value.trim(),
+                        nextStep: opt.querySelector('.opt-next').value.trim() || 'endModule',
+                        isOptimal: opt.querySelector('.opt-optimal').checked,
+                        moodChange: parseInt(opt.querySelector('.opt-mood').value) || 0,
+                        feedback: opt.querySelector('.opt-feedback').value.trim()
+                    });
+                });
+
+                if (stepId && customerText) {
+                    scenarioJson[stepId] = {
+                        customerText: customerText,
+                        options: optionsArray
+                    };
+                }
+            });
+
+            // Ensure the 'start' node exists
+            if (!scenarioJson['start']) {
+                statusBox.innerText = '❌ A step with the ID "start" is required.';
+                return;
+            }
+
+            statusBox.style.backgroundColor = '#cce5ff';
+            statusBox.style.color = '#004085';
+            statusBox.innerText = '⏳ Compiling data and publishing to cloud...';
+
+            try {
+                const { data, error } = await supabase
+                    .from('module_content')
+                    .insert([{ 
+                        module_name: name, 
+                        description: desc, 
+                        tags: tags, 
+                        scenario_data: scenarioJson 
+                    }]);
+
+                if (error) throw error;
+
+                statusBox.style.backgroundColor = '#d4edda';
+                statusBox.style.color = '#155724';
+                statusBox.innerText = '✅ Success! Module built and published.';
+                
+                // Clear the metadata
+                document.getElementById('module-name').value = '';
+                document.getElementById('module-description').value = '';
+                document.getElementById('module-tags').value = '';
+                
+            } catch (error) {
+                statusBox.
