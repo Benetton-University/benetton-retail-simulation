@@ -8,7 +8,10 @@ const dbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJl
 
 const sbClient = window.supabase.createClient(dbUrl, dbKey);
 
-// 2. UI VARIABLES (Moved to top to prevent ReferenceErrors)
+// [NEW] Global variable to hold the downloaded scenario
+let scenarioData = {}; 
+
+// 2. UI VARIABLES 
 const chatWindow = document.getElementById('chat-window');
 const buttonGrid = document.querySelector('.button-grid');
 const controlsSection = document.querySelector('.controls'); 
@@ -30,17 +33,45 @@ async function initializeUser() {
     const { data, error } = await sbClient.auth.getSession();
     
     if (data.session) {
-        // Logged in: set email and start the simulation
+        // Logged in: set email and fetch the module from the cloud
         sessionData.employeeEmail = data.session.user.email;
-        chatWindow.innerHTML = ''; // Safely clear now that chatWindow is defined
-        loadStep('start'); 
+        chatWindow.innerHTML = ''; 
+        fetchModuleFromCloud(); 
     } else {
         // Not logged in: redirect to login page immediately
         window.location.href = "index.html"; 
     }
 }
 
-// Trigger the security check
+// [NEW] CLOUD FETCH LOGIC
+async function fetchModuleFromCloud() {
+    try {
+        // Show loading state
+        chatWindow.innerHTML = '<p style="text-align:center; color:#666; margin-top: 20px;">Loading training module from the cloud...</p>';
+
+        // Query the module_content table for this specific module
+        const { data, error } = await sbClient
+            .from('module_content')
+            .select('scenario_data')
+            .eq('module_name', window.currentModuleName);
+
+        if (error) throw error;
+
+        // Check if we got the data, then start the engine
+        if (data && data.length > 0) {
+            scenarioData = data[0].scenario_data; 
+            chatWindow.innerHTML = ''; // Clear loading text
+            loadStep('start'); // Kick off the simulation!
+        } else {
+            chatWindow.innerHTML = '<p style="color:red; text-align:center; margin-top: 20px;">Error: Module not found in the database.</p>';
+        }
+    } catch (error) {
+        console.error("Cloud connection failed:", error);
+        chatWindow.innerHTML = '<p style="color:red; text-align:center; margin-top: 20px;">Error connecting to the training database.</p>';
+    }
+}
+
+// Trigger the security check on page load
 initializeUser();
 
 // 5. MOOD METER LOGIC
