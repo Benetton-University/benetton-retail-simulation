@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benetton Simulation Player</title>
+    <link rel="stylesheet" href="hub-style.css"> </head>
+<body>
+    <header class="hub-header" style="text-align: center; padding: 20px;">
+        <h1 id="display-module-name">Loading Module...</h1>
+        <a href="index.html" style="color: white; text-decoration: underline; font-size: 0.9rem;">Exit to Hub</a>
+    </header>
+
+    <main class="hub-container">
+        <div id="chat-window" class="chat-box" style="height: 400px; overflow-y: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px;"></div>
+        <div class="controls" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <div class="button-grid" style="display: grid; gap: 10px;"></div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script>
+        // Grab the ?module= part of the URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const moduleName = urlParams.get('module');
+
+        if (moduleName) {
+            // Tell the engine what to load
+            window.currentModuleName = moduleName;
+            document.getElementById('display-module-name').innerText = moduleName;
+        } else {
+            // If someone opens this file without clicking a link, send them back
+            alert("No module specified. Returning to Hub.");
+            window.location.href = "index.html";
+        }
+    </script>
+
+    <script src="engine.js"></script>
+</body>
+</html>

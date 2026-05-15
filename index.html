@@ -12,9 +12,6 @@
         <p>Interactive Learning Simulations</p>
     </header>
 
-    <!-- ========================================== -->
-    <!-- VIEW 1: LOGGED OUT (Login Form)            -->
-    <!-- ========================================== -->
     <div id="logged-out-view" style="max-width: 800px; margin: 20px auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #00563f;">
         <h3 style="color: #333; margin-bottom: 10px;">🔒 Secure Employee Login</h3>
         <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">Please log in with your credentials to access the training scenarios.</p>
@@ -28,12 +25,8 @@
         <p id="auth-error" style="color: #dc3545; display: none; margin-top: 10px; font-weight: bold;"></p>
     </div>
 
-    <!-- ========================================== -->
-    <!-- VIEW 2: LOGGED IN (Courses & Admin)        -->
-    <!-- ========================================== -->
     <div id="logged-in-view" style="display: none;">
         
-        <!-- Welcome Bar & Logout -->
         <div style="background-color: white; padding: 15px 20px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
             <div>
                 <span style="color: #666;">Logged in as: </span>
@@ -44,7 +37,6 @@
             </button>
         </div>
 
-        <!-- New Password Setup (Shows for first-time users) -->
         <div id="set-password-section" style="padding: 15px 20px; background-color: #fff3cd; border-bottom: 1px solid #ffeeba;">
             <p style="margin: 0 0 10px 0; color: #856404; font-size: 0.9rem;"><strong>First time here?</strong> Please set a permanent password for future logins.</p>
             <input type="password" id="new-password-input" placeholder="Create a secure password" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-right: 10px; width: 250px;">
@@ -54,14 +46,12 @@
             <p id="password-msg" style="color: #28a745; display: none; margin-top: 5px; font-size: 0.85rem; font-weight: bold;">✓ Password saved successfully! You can use it to log in next time.</p>
         </div>
 
-        <!-- Admin Controls (Hidden by default, shown via JS if Admin) -->
         <div id="admin-controls" style="display: none; text-align: right; padding: 10px 20px; background-color: #f4f7f6; border-bottom: 1px solid #ddd;">
             <a href="dashboard.html" id="admin-link" style="display: inline-block; background-color: #333; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px; font-size: 0.9rem; font-weight: bold;">
                 ⚙️ Admin
             </a>
         </div>
 
-        <!-- The Courses -->
         <main class="hub-container">
             <section class="role-section">
                 <div class="role-title">
@@ -69,52 +59,17 @@
                     <h2>Store Floor Associate</h2>
                 </div>
 
-                <div class="card-grid">
-                    <a href="readiness.html" class="training-card">
-    <div class="card-content">
-        <h3>First Impression & Readiness</h3>
-        <p>A pre-shift module focusing on visual merchandising standards, personal grooming, and initiating the 10-Feet Rule.</p>
-        <div class="tags">
-            <span>✨ Visual Merchandising</span>
-            <span>🤝 Greeting</span>
-        </div>
-    </div>
-    <div class="card-arrow">→</div>
-</a>
-                    <a href="return.html" class="training-card">
-                        <div class="card-content">
-                            <h3>Exchange Policy</h3>
-                            <p>A scenario focusing on customer de-escalation and proper application of the store exchange timeline and channel policies.</p>
-                            <div class="tags">
-                                <span>😤 Empathy</span>
-                                <span>📋 Policy</span>
-                            </div>
-                        </div>
-                        <div class="card-arrow">→</div>
-                    </a>
-
-                    <a href="upsell.html" class="training-card">
-                        <div class="card-content">
-                            <h3>Suggestive Selling</h3>
-                            <p>A scenario focusing on completing the look and accessories.</p>
-                            <div class="tags">
-                                <span>👕 Upselling</span>
-                                <span>📈 Sales</span>
-                            </div>
-                        </div>
-                        <div class="card-arrow">→</div>
-                    </a>
+                <div class="card-grid" id="dynamic-course-grid">
+                    <p style="padding: 20px; color: #666;">Loading available modules...</p>
                 </div>
+                
             </section>
         </main>
     </div>
 
-    <!-- ========================================== -->
-    <!-- SUPABASE AUTHENTICATION SCRIPT             -->
-    <!-- ========================================== -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // 1. Initialize Supabase (Renamed to supabaseClient to avoid the naming clash!)
+        // 1. Initialize Supabase
         const dbUrl = 'https://lttebmghqpahjclycxau.supabase.co'; 
         const dbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0dGVibWdocXBhaGpjbHljeGF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NDE4NDIsImV4cCI6MjA5MzAxNzg0Mn0.bwsArSg1M4GO0mJV83jttCikkeoXj_HL_yEsRlxptzE'; 
         const supabaseClient = window.supabase.createClient(dbUrl, dbKey);
@@ -182,9 +137,61 @@
             if (data && data.role === 'admin') {
                 document.getElementById('admin-controls').style.display = 'block';
             }
+
+            // LOAD COURSES DYNAMICALLY
+            loadDynamicCourses(); 
         }
 
-        // 6. Save New Password (For first-time users)
+        // --- 6. NEW FUNCTION TO FETCH CARDS ---
+        async function loadDynamicCourses() {
+            const grid = document.getElementById('dynamic-course-grid');
+            
+            // Fetch everything from module_content
+            const { data, error } = await supabaseClient
+                .from('module_content')
+                .select('module_name, description, tags')
+                .order('created_at', { ascending: true }); // Orders them oldest to newest
+
+            if (error || !data) {
+                grid.innerHTML = '<p style="color:red;">Error loading courses.</p>';
+                return;
+            }
+
+            // Clear the "Loading..." text
+            grid.innerHTML = '';
+
+            // Generate a card for every row in the database
+            data.forEach(mod => {
+                // Safely format the URL to handle spaces
+                const safeUrl = `simulation.html?module=${encodeURIComponent(mod.module_name)}`;
+                
+                // Format the tags
+                let tagsHtml = '';
+                if (mod.tags) {
+                    const tagArray = mod.tags.split(',');
+                    tagArray.forEach(tag => {
+                        tagsHtml += `<span>🏷️ ${tag.trim()}</span>`;
+                    });
+                }
+
+                // Build the HTML card
+                const cardHtml = `
+                    <a href="${safeUrl}" class="training-card">
+                        <div class="card-content">
+                            <h3>${mod.module_name}</h3>
+                            <p>${mod.description}</p>
+                            <div class="tags">
+                                ${tagsHtml}
+                            </div>
+                        </div>
+                        <div class="card-arrow">→</div>
+                    </a>
+                `;
+                grid.innerHTML += cardHtml;
+            });
+        }
+
+        // 7. Save New Password (For first-time users)
         async function saveNewPassword() {
             const newPassword = document.getElementById('new-password-input').value;
             
@@ -207,3 +214,5 @@
             }
         }
     </script>
+</body>
+</html>
