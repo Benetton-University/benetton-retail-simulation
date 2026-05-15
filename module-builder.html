@@ -9,7 +9,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: #f4f7f6; color: #333; overflow-x: hidden; }
         
-        /* Navigation (Unchanged) */
+        /* Navigation */
         .floating-hamburger { position: fixed; top: 20px; left: 20px; font-size: 1.8rem; background: white; border: 2px solid #00563f; color: #00563f; border-radius: 8px; cursor: pointer; z-index: 990; padding: 5px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .slide-menu { position: fixed; top: 0; left: -280px; width: 250px; height: 100vh; background-color: #00563f; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.2); transition: left 0.3s ease-in-out; z-index: 1000; }
         .slide-menu.active { left: 0; }
@@ -57,7 +57,7 @@
         <button id="close-menu" class="close-btn">&times;</button>
         <h3>Benetton Training Hub</h3>
         <a href="dashboard.html" class="menu-link">📊 Analytics Dashboard</a>
-        <a href="module-builder.html" class="menu-link" style="background-color: rgba(255,255,255,0.1); border-left: 4px solid #fff;">➕ Add Modules</a>
+        <a href="module-builder.html" class="menu-link" style="background-color: rgba(255,255,255,0.1); border-left: 4px solid #fff;">👥 Add Modules</a>
         <a href="index.html" class="menu-link">⬅️ Back to Hub</a>
     </nav>
     <div id="sidebar-overlay" class="overlay"></div>
@@ -70,7 +70,7 @@
 
         <div class="form-card">
             <div class="form-group">
-                <label>Assessment Name*</label>
+                <label>Module Name*</label>
                 <input type="text" id="module-name" placeholder="e.g., Suggestive Selling (Holiday Campaign)" required>
             </div>
             <div class="form-group">
@@ -182,7 +182,7 @@
             statusBox.style.color = '#721c24';
 
             if (!name || !desc) {
-                statusBox.innerText = '❌ Please provide an Assessment Name and Description.';
+                statusBox.innerText = '❌ Please provide a Module Name and Description.';
                 return;
             }
 
@@ -244,9 +244,27 @@
                 document.getElementById('module-description').value = '';
                 document.getElementById('module-tags').value = '';
                 
-           } catch (error) {
+            } catch (error) {
                 statusBox.style.backgroundColor = '#f8d7da';
                 statusBox.style.color = '#721c24';
                 statusBox.innerText = '❌ Database Error: ' + error.message;
             }
         }
+
+        // --- 4. NAVIGATION LOGIC ---
+        const menuToggle = document.getElementById('menu-toggle');
+        const closeMenu = document.getElementById('close-menu');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+
+        menuToggle.addEventListener('click', toggleSidebar);
+        closeMenu.addEventListener('click', toggleSidebar);
+        overlay.addEventListener('click', toggleSidebar);
+    </script>
+</body>
+</html>
