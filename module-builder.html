@@ -244,5 +244,9 @@
                 document.getElementById('module-description').value = '';
                 document.getElementById('module-tags').value = '';
                 
-            } catch (error) {
-                statusBox.
+           } catch (error) {
+                statusBox.style.backgroundColor = '#f8d7da';
+                statusBox.style.color = '#721c24';
+                statusBox.innerText = '❌ Database Error: ' + error.message;
+            }
+        }
