@@ -102,7 +102,9 @@
         // --- 1. SUPABASE INIT ---
         const dbUrl = 'https://lttebmghqpahjclycxau.supabase.co'; 
         const dbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0dGVibWdocXBhaGpjbHljeGF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NDE4NDIsImV4cCI6MjA5MzAxNzg0Mn0.bwsArSg1M4GO0mJV83jttCikkeoXj_HL_yEsRlxptzE'; 
-        const supabase = window.supabase.createClient(dbUrl, dbKey);
+        
+        // RENAMED TO supabaseClient to prevent "already declared" syntax errors
+        const supabaseClient = window.supabase.createClient(dbUrl, dbKey);
 
         let stepCount = 0;
 
@@ -224,7 +226,7 @@
             statusBox.innerText = '⏳ Compiling data and publishing to cloud...';
 
             try {
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('module_content')
                     .insert([{ 
                         module_name: name, 
