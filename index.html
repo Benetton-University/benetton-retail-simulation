@@ -47,8 +47,8 @@
         </div>
 
         <div id="admin-controls" style="display: none; text-align: right; padding: 10px 20px; background-color: #f4f7f6; border-bottom: 1px solid #ddd;">
-            <a href="dashboard.html" id="admin-link" style="display: inline-block; background-color: #333; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px; font-size: 0.9rem; font-weight: bold;">
-                ⚙️ Admin
+            <a href="manage-modules.html" id="admin-link" style="display: inline-block; background-color: #333; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px; font-size: 0.9rem; font-weight: bold;">
+                ⚙️ Admin Panel
             </a>
         </div>
 
@@ -69,20 +69,16 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // 1. Initialize Supabase
         const dbUrl = 'https://lttebmghqpahjclycxau.supabase.co'; 
         const dbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0dGVibWdocXBhaGpjbHljeGF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NDE4NDIsImV4cCI6MjA5MzAxNzg0Mn0.bwsArSg1M4GO0mJV83jttCikkeoXj_HL_yEsRlxptzE'; 
         const supabaseClient = window.supabase.createClient(dbUrl, dbKey);
 
-        // 2. Actively listen for ANY login event (Magic Link OR Password)
         supabaseClient.auth.onAuthStateChange((event, session) => {
             if (session) {
-                // As soon as Supabase confirms you are logged in, show the courses!
                 showLoggedInView(session.user.email);
             }
         });
 
-        // 3. Handle Manual Login Button
         async function handleLogin() {
             const email = document.getElementById('email-input').value;
             const password = document.getElementById('password-input').value;
@@ -95,21 +91,16 @@
                 password: password,
             });
 
-            // If they type the wrong password, show the red error.
             if (error) {
                 errorMsg.textContent = "❌ " + error.message;
                 errorMsg.style.display = 'block';
             } else {
-                // Force the screen to change immediately on success
                 showLoggedInView(data.user.email);
             }
         }
 
-        // 4. Handle Logout
         async function handleLogout() {
             await supabaseClient.auth.signOut();
-            
-            // Revert to Logged Out View
             document.getElementById('logged-in-view').style.display = 'none';
             document.getElementById('admin-controls').style.display = 'none'; 
             document.getElementById('logged-out-view').style.display = 'block';
@@ -117,55 +108,44 @@
             document.getElementById('password-input').value = '';
         }
 
-        // 5. UI Toggle & Dynamic Role Check
         async function showLoggedInView(email) {
             document.getElementById('logged-out-view').style.display = 'none';
             document.getElementById('logged-in-view').style.display = 'block';
             document.getElementById('user-email-display').textContent = email;
 
-            // Default state: hide the admin panel
             document.getElementById('admin-controls').style.display = 'none';
 
-            // Ask Supabase what role this specific email has
             const { data, error } = await supabaseClient
                 .from('user_roles')
                 .select('role')
                 .eq('email', email)
                 .single(); 
 
-            // Reveal the dashboard button only for admins
             if (data && data.role === 'admin') {
                 document.getElementById('admin-controls').style.display = 'block';
             }
 
-            // LOAD COURSES DYNAMICALLY
             loadDynamicCourses(); 
         }
 
-        // --- 6. NEW FUNCTION TO FETCH CARDS ---
         async function loadDynamicCourses() {
             const grid = document.getElementById('dynamic-course-grid');
             
-            // Fetch everything from module_content
             const { data, error } = await supabaseClient
                 .from('module_content')
                 .select('module_name, description, tags')
-                .order('created_at', { ascending: true }); // Orders them oldest to newest
+                .order('created_at', { ascending: true });
 
             if (error || !data) {
                 grid.innerHTML = '<p style="color:red;">Error loading courses.</p>';
                 return;
             }
 
-            // Clear the "Loading..." text
             grid.innerHTML = '';
 
-            // Generate a card for every row in the database
             data.forEach(mod => {
-                // Safely format the URL to handle spaces
                 const safeUrl = `simulation.html?module=${encodeURIComponent(mod.module_name)}`;
                 
-                // Format the tags
                 let tagsHtml = '';
                 if (mod.tags) {
                     const tagArray = mod.tags.split(',');
@@ -174,7 +154,6 @@
                     });
                 }
 
-                // Build the HTML card
                 const cardHtml = `
                     <a href="${safeUrl}" class="training-card">
                         <div class="card-content">
@@ -191,7 +170,6 @@
             });
         }
 
-        // 7. Save New Password (For first-time users)
         async function saveNewPassword() {
             const newPassword = document.getElementById('new-password-input').value;
             
