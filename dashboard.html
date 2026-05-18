@@ -9,7 +9,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: #f4f7f6; color: #333; overflow-x: hidden; }
         
-        /* 1. Floating Hamburger Button */
+        /* Floating Hamburger Button */
         .floating-hamburger {
             position: fixed; 
             top: 20px;
@@ -20,7 +20,7 @@
             color: #00563f;
             border-radius: 8px;
             cursor: pointer;
-            z-index: 990; /* Keeps it below the open menu but above charts */
+            z-index: 990;
             padding: 5px 12px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             transition: 0.2s;
@@ -30,24 +30,23 @@
             color: white;
         }
 
-        /* 2. The Slide-Out Menu */
+        /* The Slide-Out Menu */
         .slide-menu {
             position: fixed;
             top: 0;
-            left: -280px; /* Hides it off-screen to the left */
+            left: -280px;
             width: 250px;
             height: 100vh;
-            background-color: #00563f; /* Benetton Corporate Green */
+            background-color: #00563f;
             padding: 20px;
             box-shadow: 2px 0 10px rgba(0,0,0,0.2);
-            transition: left 0.3s ease-in-out; /* The sliding animation */
+            transition: left 0.3s ease-in-out;
             z-index: 1000;
         }
         .slide-menu.active {
             left: 0; 
         }
 
-        /* Menu Content Styling */
         .slide-menu h3 { color: white; margin: 50px 0 20px 10px; font-size: 1.2rem; }
         .menu-link {
             display: block;
@@ -60,7 +59,6 @@
         }
         .menu-link:hover { background-color: rgba(255,255,255,0.1); border-left: 4px solid #fff; }
 
-        /* The Close 'X' Button inside the menu */
         .close-btn {
             position: absolute;
             top: 15px;
@@ -72,7 +70,6 @@
             cursor: pointer;
         }
 
-        /* 3. The Dark Background Overlay */
         .overlay {
             display: none; 
             position: fixed;
@@ -87,12 +84,12 @@
             display: block;
         }
 
-        /* Main Content Area (Full Width Now) */
+        /* Main Content Area */
         .main-content { 
             width: 100%; 
             max-width: 1200px; 
             margin: 0 auto; 
-            padding: 80px 30px 40px 30px; /* 80px top padding clears the floating button */
+            padding: 80px 30px 40px 30px;
         }
         .header { margin-bottom: 30px; }
         .header h1 { color: #333; font-size: 2rem; margin-bottom: 5px; }
@@ -111,7 +108,6 @@
         .chart-box h3 { text-align: center; margin-bottom: 15px; font-size: 1.1rem; color: #444; }
         .canvas-container { position: relative; height: 280px; width: 100%; }
         
-        /* Mobile Adjustments */
         @media (max-width: 768px) {
             .cards-container, .charts-container { flex-direction: column; }
         }
@@ -121,11 +117,11 @@
 
     <button id="menu-toggle" class="floating-hamburger">☰</button>
 
-    <nav id="sidebar" class="slide-menu">
+    <<nav id="sidebar" class="slide-menu">
         <button id="close-menu" class="close-btn">&times;</button>
         <h3>Benetton Training Hub</h3>
         <a href="dashboard.html" class="menu-link">📊 Analytics Dashboard</a>
-        <a href="module-builder.html" class="menu-link">👥 Add Modules</a>
+        <a href="manage-modules.html" class="menu-link">⚙️ Manage Modules</a>
         <a href="index.html" class="menu-link">⬅️ Back to Hub</a>
     </nav>
 
@@ -248,6 +244,7 @@
                 }
             }
 
+            // Charts Rendering Logic
             function drawCharts(labels, errorsData, moodData) {
                 new Chart(document.getElementById('errorsChart'), {
                     type: 'bar',
