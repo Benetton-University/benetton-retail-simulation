@@ -71,6 +71,8 @@ async function fetchModuleFromCloud() {
             // ROUTING LOGIC
             if (moduleType === 'quiz') {
                 initQuizMode();
+            } else if (moduleType === 'assessment') {
+                initAssessmentMode(); // <--- ROUTE TO MODE C
             } else {
                 loadStep('start'); 
             }
