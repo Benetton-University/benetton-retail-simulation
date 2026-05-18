@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Benetton Training Hub - Quiz Builder</title>
     <style>
+        /* Navigation Styles */
+        .floating-hamburger { position: fixed; top: 20px; left: 20px; font-size: 1.8rem; background: white; border: 2px solid #00563f; color: #00563f; border-radius: 8px; cursor: pointer; z-index: 990; padding: 5px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .slide-menu { position: fixed; top: 0; left: -280px; width: 250px; height: 100vh; background-color: #00563f; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.2); transition: left 0.3s ease-in-out; z-index: 1000; }
+        .slide-menu.active { left: 0; }
+        .slide-menu h3 { color: white; margin: 50px 0 20px 10px; font-size: 1.2rem; }
+        .menu-link { display: block; color: white; text-decoration: none; padding: 15px 10px; font-size: 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .menu-link:hover { background-color: rgba(255,255,255,0.1); border-left: 4px solid #fff; }
+        .close-btn { position: absolute; top: 15px; right: 20px; background: none; border: none; color: white; font-size: 2rem; cursor: pointer; }
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 999; }
+        .overlay.active { display: block; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: #f4f7f6; color: #333; padding: 40px 20px; }
         
@@ -29,6 +39,15 @@
     </style>
 </head>
 <body>
+    <button id="menu-toggle" class="floating-hamburger">☰</button>
+    <nav id="sidebar" class="slide-menu">
+        <button id="close-menu" class="close-btn">&times;</button>
+        <h3>Benetton Training Hub</h3>
+        <a href="dashboard.html" class="menu-link">📊 Analytics Dashboard</a>
+        <a href="manage-modules.html" class="menu-link">⚙️ Manage Modules</a>
+        <a href="index.html" class="menu-link">⬅️ Back to Hub</a>
+    </nav>
+    <div id="sidebar-overlay" class="overlay"></div>
 
     <div class="builder-container">
         <div class="header">
