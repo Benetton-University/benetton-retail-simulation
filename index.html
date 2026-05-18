@@ -127,23 +127,42 @@
             document.getElementById('password-input').value = '';
         }
 
-        async function showLoggedInView(email) {
+      async function showLoggedInView(email) {
             document.getElementById('logged-out-view').style.display = 'none';
             document.getElementById('logged-in-view').style.display = 'block';
-            document.getElementById('user-email-display').textContent = email;
 
-            document.getElementById('admin-controls').style.display = 'none';
+            if (document.getElementById('admin-controls')) {
+                document.getElementById('admin-controls').style.display = 'none';
+            }
 
+            // 1. Query the table (Postgres handles unquoted lowercase automatically, 
+            // but we use an all-column select to safely grab whatever case variants exist)
             const { data, error } = await supabaseClient
                 .from('user_roles')
-                .select('role')
+                .select('*')
                 .eq('email', email)
                 .single(); 
 
-            if (data && data.role === 'admin') {
-                document.getElementById('admin-controls').style.display = 'block';
+            // Fallback username format from email link string
+            const fallbackName = email.split('@')[0];
+            let greetingName = fallbackName;
+
+            // 2. CASE-SENSITIVITY SAFE CHECK: Check both 'Name' and 'name'
+            if (data) {
+                greetingName = data.Name || data.name || fallbackName;
+                
+                if (data.role === 'admin' && document.getElementById('admin-controls')) {
+                    document.getElementById('admin-controls').style.display = 'block';
+                }
             }
 
+            // 3. CRASH-PROOF DOM ASSIGNMENT: Supports both element layout variations smoothly
+            const nameDisplay = document.getElementById('user-name-display') || document.getElementById('user-email-display');
+            if (nameDisplay) {
+                nameDisplay.textContent = greetingName;
+            }
+
+            // 4. SAFELY TRIGGER THE HUB GRID DATA LOADER
             loadDynamicCourses(); 
         }
 
