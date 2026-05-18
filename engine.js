@@ -416,4 +416,180 @@ async function completeSimulation() {
                 <a href="index.html" style="padding: 12px 24px; background: #00563f; color: white; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Return to Training Hub</a>
             </div>`;
     }
+}// ==========================================
+// MODE C: FORMAL ASSESSMENT LOGIC
+// ==========================================
+
+let assessState = {
+    currentIndex: 0,
+    userAnswers: [] // Stores index logs of chosen options
+};
+
+function initAssessmentMode() {
+    chatWindow.style.backgroundColor = '#ffffff';
+    chatWindow.style.border = 'none';
+    chatWindow.style.boxShadow = 'none';
+    
+    // Initialize blank tracking index slots matching question length array
+    assessState.userAnswers = new Array(scenarioData.questions.length).fill(null);
+    loadAssessmentQuestion();
+}
+
+function loadAssessmentQuestion() {
+    const q = scenarioData.questions[assessState.currentIndex];
+    const total = scenarioData.questions.length;
+    const currentSavedAnswer = assessState.userAnswers[assessState.currentIndex];
+
+    // Render Clean Exam UI Structure Header
+    chatWindow.innerHTML = `
+        <div style="padding: 10px; animation: slideIn 0.2s ease-out;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding: 15px 20px; background: #eaedf0; border-radius: 8px; font-weight: bold; color: #495057;">
+                <span>📋 COMPLIANCE EVALUATION</span>
+                <span>QUESTION ${assessState.currentIndex + 1} OF ${total}</span>
+            </div>
+            <h2 style="color: #212529; line-height: 1.4; font-size: 1.5rem; margin-bottom: 25px;">${q.question}</h2>
+        </div>
+    `;
+
+    buttonGrid.innerHTML = '';
+    buttonGrid.style.gridTemplateColumns = '1fr'; // Formal list format layout
+
+    q.options.forEach((optText, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'action-btn';
+        btn.style.fontSize = '1.05rem';
+        btn.style.padding = '15px 20px';
+        btn.style.display = 'flex';
+        btn.style.alignItems = 'center';
+        btn.style.gap = '12px';
+        
+        // Render state selection circle styles matching standard exams
+        const isSelected = currentSavedAnswer === index;
+        const radioIcon = isSelected ? '🔘' : '⚪';
+        btn.innerHTML = `<span style="font-size:1.2rem;">${radioIcon}</span> ${optText}`;
+        
+        if (isSelected) {
+            btn.style.backgroundColor = '#e8f0fe';
+            btn.style.borderColor = '#1a73e8';
+            btn.style.color = '#185abc';
+        }
+
+        btn.onclick = () => {
+            assessState.userAnswers[assessState.currentIndex] = index;
+            loadAssessmentQuestion(); // Redraw selection changes instantly
+        };
+        buttonGrid.appendChild(btn);
+    });
+
+    renderAssessmentNavigationControls(total);
+}
+
+function renderAssessmentNavigationControls(total) {
+    removeFeedbackPanel(); // Clear previous layouts if any
+    
+    const controlPanel = document.createElement('div');
+    controlPanel.id = 'active-feedback';
+    controlPanel.style.display = 'flex';
+    controlPanel.style.justifyContent = 'space-between';
+    controlPanel.style.marginTop = '20px';
+    controlPanel.style.width = '100%';
+
+    // Left Anchor: Previous Navigation
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'continue-btn';
+    prevBtn.style.backgroundColor = '#6c757d';
+    prevBtn.innerText = '⬅ Previous';
+    prevBtn.disabled = assessState.currentIndex === 0;
+    if (assessState.currentIndex === 0) prevBtn.style.opacity = '0.4';
+    prevBtn.onclick = () => {
+        assessState.currentIndex--;
+        loadAssessmentQuestion();
+    };
+
+    // Right Anchor: Next or Submission Trigger Branch
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'continue-btn';
+    
+    const isLastQuestion = (assessState.currentIndex + 1 === total);
+    nextBtn.innerText = isLastQuestion ? 'Submit Assessment ✔' : 'Next Question ➔';
+    if (isLastQuestion) nextBtn.style.backgroundColor = '#28a745';
+
+    nextBtn.onclick = () => {
+        // Enforce answering current step before changing route markers
+        if (assessState.userAnswers[assessState.currentIndex] === null) {
+            alert("Please select an answer option row to proceed.");
+            return;
+        }
+
+        if (isLastQuestion) {
+            const confirmSubmit = confirm("Are you sure you want to finish? Your choices will be locked and submitted for evaluation tracking.");
+            if (confirmSubmit) calculateAndSaveAssessmentResults();
+        } else {
+            assessState.currentIndex++;
+            loadAssessmentQuestion();
+        }
+    };
+
+    controlPanel.appendChild(prevBtn);
+    controlPanel.appendChild(nextBtn);
+    controlsSection.appendChild(controlPanel);
+}
+
+async function calculateAndSaveAssessmentResults() {
+    removeFeedbackPanel();
+    buttonGrid.innerHTML = '<p style="text-align:center; color:#666;">Evaluating score metrics with tracking databases...</p>';
+
+    let absoluteCorrectCount = 0;
+    const totalQ = scenarioData.questions.length;
+
+    scenarioData.questions.forEach((q, idx) => {
+        if (assessState.userAnswers[idx] === q.correctIndex) {
+            absoluteCorrectCount++;
+        }
+    });
+
+    const finalPercentage = Math.round((absoluteCorrectCount / totalQ) * 100);
+    const requiredPassMark = scenarioData.passingScore || 80;
+    const hasPassed = finalPercentage >= requiredPassMark;
+
+    // Display Comprehensive Status Metrics Screen Block
+    chatWindow.innerHTML = `
+        <div style="text-align:center; padding: 30px 10px; animation: slideIn 0.3s ease;">
+            <h1 style="font-size: 4rem; margin-bottom: 15px;">${hasPassed ? '📜' : '❌'}</h1>
+            <h2 style="color: ${hasPassed ? '#28a745' : '#dc3545'}; margin-bottom: 10px; font-size: 2rem;">
+                ${hasPassed ? 'Assessment Passed!' : 'Certification Failed'}
+            </h2>
+            <p style="font-size: 1.2rem; color: #555; margin-bottom: 25px;">
+                Your Score: <strong>${finalPercentage}%</strong> (Required: ${requiredPassMark}%)
+            </p>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; font-size: 0.95rem; line-height: 1.5; text-align: left; max-width: 500px; margin: 0 auto; border: 1px solid #ddd;">
+                <strong>Evaluation Detail Summary:</strong><br>
+                • Total Questions Answered: ${totalQ}<br>
+                • Correct Verified Targets: ${absoluteCorrectCount}<br>
+                • Total Incorrect Registers: ${totalQ - absoluteCorrectCount}
+            </div>
+        </div>
+    `;
+
+    const totalMistakesValue = (totalQ - absoluteCorrectCount).toString();
+
+    const { data, error } = await sbClient
+        .from('training_logs')
+        .insert([{
+            email: sessionData.employeeEmail, 
+            module_name: sessionData.moduleName,
+            score: finalPercentage,
+            final_mood_score: 50, // Static baseline index for exams
+            mistakes: totalMistakesValue 
+        }]);
+
+    if (error) {
+        console.error("SUPABASE SYSTEM TIMEOUT:", error);
+        buttonGrid.innerHTML = '<p style="color:red; text-align:center;">Database logging timed out. Please contact IT administration.</p>';
+    } else {
+        buttonGrid.innerHTML = `
+            <div style="text-align:center;">
+                <a href="index.html" style="padding: 12px 24px; background: #00563f; color: white; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 1.1rem;">Return to Dashboard</a>
+            </div>`;
+    }
 }
