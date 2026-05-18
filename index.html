@@ -47,23 +47,43 @@
         </div>
 
         <div id="admin-controls" style="display: none; text-align: right; padding: 10px 20px; background-color: #f4f7f6; border-bottom: 1px solid #ddd;">
-            <a href="dashboard.html" id="admin-link" style="display: inline-block; background-color: #333; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px; font-size: 0.9rem; font-weight: bold;">
+            <a href="manage-modules.html" id="admin-link" style="display: inline-block; background-color: #333; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px; font-size: 0.9rem; font-weight: bold;">
                 ⚙️ Admin Panel
             </a>
         </div>
 
-        <main class="hub-container">
-            <section class="role-section">
-                <div class="role-title">
-                    <span class="icon">🛍️</span>
-                    <h2>Store Floor Associate</h2>
+        <main class="hub-container" style="max-width: 1100px; margin: 30px auto; padding: 0 20px;">
+            
+            <section class="role-section" style="margin-bottom: 50px;">
+                <div class="role-title" style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #00563f; padding-bottom: 8px;">
+                    <span style="font-size: 1.6rem;">🎭</span>
+                    <h2 style="color: #00563f; font-size: 1.5rem; font-weight: bold;">Scenario Simulations</h2>
                 </div>
-
-                <div class="card-grid" id="dynamic-course-grid">
-                    <p style="padding: 20px; color: #666;">Loading available modules...</p>
+                <div class="card-grid" id="simulation-grid">
+                    <p style="padding: 10px; color: #888; font-style: italic;">Loading simulations...</p>
                 </div>
-                
             </section>
+
+            <section class="role-section" style="margin-bottom: 50px;">
+                <div class="role-title" style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #00563f; padding-bottom: 8px;">
+                    <span style="font-size: 1.6rem;">📝</span>
+                    <h2 style="color: #00563f; font-size: 1.5rem; font-weight: bold;">Knowledge Quizzes</h2>
+                </div>
+                <div class="card-grid" id="quiz-grid">
+                    <p style="padding: 10px; color: #888; font-style: italic;">Loading quizzes...</p>
+                </div>
+            </section>
+
+            <section class="role-section" style="margin-bottom: 50px;">
+                <div class="role-title" style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #00563f; padding-bottom: 8px;">
+                    <span style="font-size: 1.6rem;">📋</span>
+                    <h2 style="color: #00563f; font-size: 1.5rem; font-weight: bold;">Formal Assessments</h2>
+                </div>
+                <div class="card-grid" id="assessment-grid">
+                    <p style="padding: 10px; color: #888; font-style: italic;">Loading formal evaluations...</p>
+                </div>
+            </section>
+            
         </main>
     </div>
 
@@ -128,20 +148,32 @@
             loadDynamicCourses(); 
         }
 
+        // UPDATED: Fetches all modules and splits them cleanly by type
         async function loadDynamicCourses() {
-            const grid = document.getElementById('dynamic-course-grid');
+            const simGrid = document.getElementById('simulation-grid');
+            const quizGrid = document.getElementById('quiz-grid');
+            const assessGrid = document.getElementById('assessment-grid');
             
             const { data, error } = await supabaseClient
                 .from('module_content')
-                .select('module_name, description, tags')
+                .select('module_name, description, tags, module_type')
                 .order('created_at', { ascending: true });
 
             if (error || !data) {
-                grid.innerHTML = '<p style="color:red;">Error loading courses.</p>';
+                simGrid.innerHTML = '<p style="color:red;">Error connecting to backend curriculum table.</p>';
+                quizGrid.innerHTML = '';
+                assessGrid.innerHTML = '';
                 return;
             }
 
-            grid.innerHTML = '';
+            // Flush out loading placeholders
+            simGrid.innerHTML = '';
+            quizGrid.innerHTML = '';
+            assessGrid.innerHTML = '';
+
+            let hasSims = false;
+            let hasQuizzes = false;
+            let hasAssessments = false;
 
             data.forEach(mod => {
                 const safeUrl = `simulation.html?module=${encodeURIComponent(mod.module_name)}`;
@@ -166,8 +198,25 @@
                         <div class="card-arrow">→</div>
                     </a>
                 `;
-                grid.innerHTML += cardHtml;
+
+                // Sorting mechanism based on table type flag
+                const type = mod.module_type || 'scenario'; 
+                if (type === 'scenario') {
+                    simGrid.innerHTML += cardHtml;
+                    hasSims = true;
+                } else if (type === 'quiz') {
+                    quizGrid.innerHTML += cardHtml;
+                    hasQuizzes = true;
+                } else if (type === 'assessment') {
+                    assessGrid.innerHTML += cardHtml;
+                    hasAssessments = true;
+                }
             });
+
+            // Fallback status messaging for missing course types
+            if (!hasSims) simGrid.innerHTML = '<p style="padding: 10px; color: #999; font-style: italic;">No active situational scenarios available right now.</p>';
+            if (!hasQuizzes) quizGrid.innerHTML = '<p style="padding: 10px; color: #999; font-style: italic;">No core knowledge check quizzes deployed at this time.</p>';
+            if (!hasAssessments) assessGrid.innerHTML = '<p style="padding: 10px; color: #999; font-style: italic;">No formal certification assessments listed for your profile.</p>';
         }
 
         async function saveNewPassword() {
