@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benetton Training Hub - Assessment Builder</title>
+    <style>
+        /* Navigation Styles */
+        .floating-hamburger { position: fixed; top: 20px; left: 20px; font-size: 1.8rem; background: white; border: 2px solid #00563f; color: #00563f; border-radius: 8px; cursor: pointer; z-index: 990; padding: 5px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .slide-menu { position: fixed; top: 0; left: -280px; width: 250px; height: 100vh; background-color: #00563f; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.2); transition: left 0.3s ease-in-out; z-index: 1000; }
+        .slide-menu.active { left: 0; }
+        .slide-menu h3 { color: white; margin: 50px 0 20px 10px; font-size: 1.2rem; }
+        .menu-link { display: block; color: white; text-decoration: none; padding: 15px 10px; font-size: 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .menu-link:hover { background-color: rgba(255,255,255,0.1); border-left: 4px solid #fff; }
+        .close-btn { position: absolute; top: 15px; right: 20px; background: none; border: none; color: white; font-size: 2rem; cursor: pointer; }
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 999; }
+        .overlay.active { display: block; }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f4f7f6; color: #333; padding: 40px 20px; }
+        
+        .builder-container { max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border-top: 6px solid #00563f; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 8px; color: #555; }
+        .form-control { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; }
+        .form-inline-group { display: flex; gap: 20px; }
+        .form-inline-group .form-group { flex: 1; }
+        
+        .question-card { background: #f8f9fa; border: 1px solid #e9ecef; border-left: 4px solid #00563f; border-radius: 8px; padding: 20px; margin-bottom: 20px; position: relative; }
+        .remove-btn { position: absolute; top: 15px; right: 15px; background: #f8d7da; color: #721c24; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
+        
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
+        .option-row { display: flex; align-items: center; gap: 10px; background: white; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+        .option-row input[type="radio"] { transform: scale(1.2); cursor: pointer; }
+        
+        .btn-primary { background: #00563f; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: 0.2s; }
+        .btn-primary:hover { background: #003d2c; }
+        .btn-secondary { background: #e9ecef; color: #333; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-secondary:hover { background: #dee2e6; }
+    </style>
+</head>
+<body>
+
+    <button id="menu-toggle" class="floating-hamburger">☰</button>
+    <nav id="sidebar" class="slide-menu">
+        <button id="close-menu" class="close-btn">&times;</button>
+        <h3>Benetton Training Hub</h3>
+        <a href="dashboard.html" class="menu-link">📊 Analytics Dashboard</a>
+        <a href="manage-modules.html" class="menu-link">⚙️ Manage Modules</a>
+        <a href="index.html" class="menu-link">⬅️ Back to Hub</a>
+    </nav>
+    <div id="sidebar-overlay" class="overlay"></div>
+
+    <div class="builder-container" style="margin-top: 40px;">
+        <div class="header">
+            <div>
+                <h1>Formal Assessment Builder</h1>
+                <a href="manage-modules.html" style="color: #666; text-decoration: none;">&larr; Back to Curriculum</a>
+            </div>
+            <button class="btn-primary" onclick="publishAssessment()">Publish Assessment</button>
+        </div>
+
+        <div class="form-group">
+            <label>Assessment Title</label>
+            <input type="text" id="assess-title" class="form-control" placeholder="e.g., POS Compliance & Cash Security Exam">
+        </div>
+        <div class="form-group">
+            <label>Description</label>
+            <textarea id="assess-desc" class="form-control" rows="2" placeholder="Instructions or summary for employees..."></textarea>
+        </div>
+        
+        <div class="form-inline-group">
+            <div class="form-group">
+                <label>Tags (Comma separated)</label>
+                <input type="text" id="assess-tags" class="form-control" placeholder="e.g., Compliance, Security, Audit">
+            </div>
+            <div class="form-group">
+                <label>Passing Score Threshold (%)</label>
+                <input type="number" id="assess-pass-mark" class="form-control" value="80" min="0" max="100">
+            </div>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
+
+        <h3 style="margin-bottom: 15px; color: #333;">Evaluation Questions</h3>
+        <div id="questions-container"></div>
+
+        <button class="btn-secondary" onclick="addQuestionCard()">➕ Add Question</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const dbUrl = 'https://lttebmghqpahjclycxau.supabase.co'; 
+        const dbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0dGVibWdocXBhaGpjbHljeGF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NDE4NDIsImV4cCI6MjA5MzAxNzg0Mn0.bwsArSg1M4GO0mJV83jttCikkeoXj_HL_yEsRlxptzE'; 
+        const sbClient = window.supabase.createClient(dbUrl, dbKey);
+
+        let questionCount = 0;
+
+        function addQuestionCard() {
+            questionCount++;
+            const qId = questionCount;
+            const cardHTML = `
+                <div class="question-card" id="q-card-${qId}">
+                    <button class="remove-btn" onclick="document.getElementById('q-card-${qId}').remove()">Remove</button>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label>Question ${qId}</label>
+                        <input type="text" class="form-control q-text" placeholder="Enter formal evaluation question...">
+                    </div>
+                    <p style="font-size: 0.85rem; color: #666; margin-bottom: 5px;">Set option fields and select the correct answer row marker.</p>
+                    <div class="options-grid">
+                        <div class="option-row">
+                            <input type="radio" name="correct-${qId}" value="0" checked>
+                            <input type="text" class="form-control q-opt" placeholder="Option A">
+                        </div>
+                        <div class="option-row">
+                            <input type="radio" name="correct-${qId}" value="1">
+                            <input type="text" class="form-control q-opt" placeholder="Option B">
+                        </div>
+                        <div class="option-row">
+                            <input type="radio" name="correct-${qId}" value="2">
+                            <input type="text" class="form-control q-opt" placeholder="Option C">
+                        </div>
+                        <div class="option-row">
+                            <input type="radio" name="correct-${qId}" value="3">
+                            <input type="text" class="form-control q-opt" placeholder="Option D">
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('questions-container').insertAdjacentHTML('beforeend', cardHTML);
+        }
+
+        async function publishAssessment() {
+            const title = document.getElementById('assess-title').value.trim();
+            const desc = document.getElementById('assess-desc').value.trim();
+            const tags = document.getElementById('assess-tags').value.trim();
+            const passMark = parseInt(document.getElementById('assess-pass-mark').value) || 80;
+            
+            if (!title) return alert("Please specify an Assessment Title.");
+            const cards = document.querySelectorAll('.question-card');
+            if (cards.length === 0) return alert("Please specify at least one question.");
+
+            const compiledData = { passingScore: passMark, questions: [] };
+            let validationFailed = false;
+
+            cards.forEach(card => {
+                const qText = card.querySelector('.q-text').value.trim();
+                const optInputs = card.querySelectorAll('.q-opt');
+                const correctRadio = card.querySelector('input[type="radio"]:checked');
+                const options = Array.from(optInputs).map(input => input.value.trim());
+
+                if (!qText || options.some(opt => opt === "")) validationFailed = true;
+
+                compiledData.questions.push({
+                    question: qText,
+                    options: options,
+                    correctIndex: parseInt(correctRadio.value)
+                });
+            });
+
+            if (validationFailed) return alert("Ensure all structural fields are completed before publishing.");
+
+            const btn = document.querySelector('.btn-primary');
+            btn.innerText = "Publishing to Cloud...";
+            btn.disabled = true;
+
+            const { error } = await sbClient
+                .from('module_content')
+                .insert([{
+                    module_name: title,
+                    description: desc,
+                    tags: tags,
+                    scenario_data: compiledData,
+                    module_type: 'assessment'
+                }]);
+
+            if (error) {
+                alert("Cloud write failure: " + error.message);
+                btn.innerText = "Publish Assessment";
+                btn.disabled = false;
+            } else {
+                alert("Assessment Saved and Deployed Successfully!");
+                window.location.href = "manage-modules.html";
+            }
+        }
+
+        window.onload = addQuestionCard;
+
+        // Navigation Toggle Logic
+        const menuToggle = document.getElementById('menu-toggle');
+        const closeMenu = document.getElementById('close-menu');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+
+        menuToggle.addEventListener('click', toggleSidebar);
+        closeMenu.addEventListener('click', toggleSidebar);
+        overlay.addEventListener('click', toggleSidebar);
+    </script>
+</body>
+</html>

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Benetton Training Hub - Quiz Builder</title>
     <style>
-        /* Navigation Styles */
+        /* Navigation & Sidebar Layouts */
         .floating-hamburger { position: fixed; top: 20px; left: 20px; font-size: 1.8rem; background: white; border: 2px solid #00563f; color: #00563f; border-radius: 8px; cursor: pointer; z-index: 990; padding: 5px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .slide-menu { position: fixed; top: 0; left: -280px; width: 250px; height: 100vh; background-color: #00563f; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.2); transition: left 0.3s ease-in-out; z-index: 1000; }
         .slide-menu.active { left: 0; }
@@ -15,6 +15,7 @@
         .close-btn { position: absolute; top: 15px; right: 20px; background: none; border: none; color: white; font-size: 2rem; cursor: pointer; }
         .overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 999; }
         .overlay.active { display: block; }
+        
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: #f4f7f6; color: #333; padding: 40px 20px; }
         
@@ -49,7 +50,7 @@
     </nav>
     <div id="sidebar-overlay" class="overlay"></div>
 
-    <div class="builder-container">
+    <div class="builder-container" style="margin-top: 40px;">
         <div class="header">
             <div>
                 <h1 style="color: #333; margin-bottom: 5px;">Knowledge Quiz Builder</h1>
@@ -74,8 +75,7 @@
         <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
 
         <h3 style="margin-bottom: 15px; color: #333;">Questions</h3>
-        <div id="questions-container">
-            </div>
+        <div id="questions-container"></div>
 
         <button class="btn-secondary" onclick="addQuestionCard()">➕ Add Question</button>
     </div>
@@ -91,18 +91,14 @@
         function addQuestionCard() {
             questionCount++;
             const qId = questionCount;
-            
             const cardHTML = `
                 <div class="question-card" id="q-card-${qId}">
                     <button class="remove-btn" onclick="document.getElementById('q-card-${qId}').remove()">Remove</button>
-                    
                     <div class="form-group" style="margin-bottom: 15px;">
                         <label>Question ${qId}</label>
                         <input type="text" class="form-control q-text" placeholder="Enter the question here...">
                     </div>
-                    
                     <p style="font-size: 0.85rem; color: #666; margin-bottom: 5px;">Select the radio button next to the correct answer.</p>
-                    
                     <div class="options-grid">
                         <div class="option-row">
                             <input type="radio" name="correct-${qId}" value="0" checked>
@@ -121,14 +117,12 @@
                             <input type="text" class="form-control q-opt" placeholder="Option D">
                         </div>
                     </div>
-
                     <div class="form-group" style="margin-top: 15px; margin-bottom: 0;">
                         <label>Learning Feedback (Shown after they answer)</label>
                         <input type="text" class="form-control q-feedback" placeholder="Explain why the correct answer is right...">
                     </div>
                 </div>
             `;
-            
             document.getElementById('questions-container').insertAdjacentHTML('beforeend', cardHTML);
         }
 
@@ -138,8 +132,6 @@
             const tags = document.getElementById('quiz-tags').value.trim();
             
             if (!title) return alert("Please enter a Quiz Title.");
-
-            // Gather all questions
             const cards = document.querySelectorAll('.question-card');
             if (cards.length === 0) return alert("You need to add at least one question!");
 
@@ -151,12 +143,9 @@
                 const optInputs = card.querySelectorAll('.q-opt');
                 const correctRadio = card.querySelector('input[type="radio"]:checked');
                 const feedback = card.querySelector('.q-feedback').value.trim();
-
                 const options = Array.from(optInputs).map(input => input.value.trim());
 
-                if (!qText || options.some(opt => opt === "")) {
-                    validationFailed = true;
-                }
+                if (!qText || options.some(opt => opt === "")) validationFailed = true;
 
                 quizData.questions.push({
                     question: qText,
@@ -166,14 +155,12 @@
                 });
             });
 
-            if (validationFailed) return alert("Please fill out all question text and option fields before publishing.");
+            if (validationFailed) return alert("Please fill out all fields before publishing.");
 
-            // Lock the button
             const btn = document.querySelector('.btn-primary');
             btn.innerText = "Saving to Database...";
             btn.disabled = true;
 
-            // Push to Supabase with the new module_type flag!
             const { error } = await sbClient
                 .from('module_content')
                 .insert([{
@@ -181,7 +168,7 @@
                     description: desc,
                     tags: tags,
                     scenario_data: quizData,
-                    module_type: 'quiz' // <--- The crucial new flag
+                    module_type: 'quiz'
                 }]);
 
             if (error) {
@@ -194,8 +181,22 @@
             }
         }
 
-        // Add one empty question by default on load
         window.onload = addQuestionCard;
+
+        // FIXED: Sidebar toggle controls added here
+        const menuToggle = document.getElementById('menu-toggle');
+        const closeMenu = document.getElementById('close-menu');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+
+        menuToggle.addEventListener('click', toggleSidebar);
+        closeMenu.addEventListener('click', toggleSidebar);
+        overlay.addEventListener('click', toggleSidebar);
     </script>
 </body>
 </html>
