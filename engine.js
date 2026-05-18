@@ -1,5 +1,6 @@
 // ==========================================
 // THE MASTER ENGINE (engine.js)
+// Supports: Scenarios & Gamified Quizzes
 // ==========================================
 
 // 1. UNIQUE CONNECTION 
@@ -12,9 +13,8 @@ const sbClient = window.supabase.createClient(dbUrl, dbKey);
 const chatWindow = document.getElementById('chat-window');
 const buttonGrid = document.querySelector('.button-grid');
 const controlsSection = document.querySelector('.controls'); 
-let currentMood = 50; 
 
-// 3. TELEMETRY CLIPBOARD
+// 3. TELEMETRY & STATE
 const sessionData = {
     employeeEmail: "", 
     moduleName: window.currentModuleName || "Unknown Module", 
@@ -23,6 +23,17 @@ const sessionData = {
     finalMoodScore: 50,
     criticalErrors: 0,
     choicesLog: [] 
+};
+
+let currentMood = 50; 
+let scenarioData = null;
+
+// Gamified Quiz State
+let quizState = {
+    currentIndex: 0,
+    score: 0,
+    streak: 0,
+    mistakes: 0
 };
 
 // 4. SECURITY & INITIALIZATION
@@ -38,24 +49,33 @@ async function initializeUser() {
     }
 }
 
-// CLOUD FETCH LOGIC
+// 5. CLOUD ROUTER
 async function fetchModuleFromCloud() {
     try {
         chatWindow.innerHTML = '<p style="text-align:center; color:#666; margin-top: 20px;">Loading training module from the cloud...</p>';
 
+        // Notice we are now asking for the module_type as well
         const { data, error } = await sbClient
             .from('module_content')
-            .select('scenario_data')
+            .select('scenario_data, module_type')
             .eq('module_name', window.currentModuleName);
 
         if (error) throw error;
 
         if (data && data.length > 0) {
             scenarioData = data[0].scenario_data; 
+            const moduleType = data[0].module_type || 'scenario'; // Default to scenario if missing
+
             chatWindow.innerHTML = ''; 
-            loadStep('start'); 
+            
+            // ROUTING LOGIC
+            if (moduleType === 'quiz') {
+                initQuizMode();
+            } else {
+                loadStep('start'); 
+            }
         } else {
-            chatWindow.innerHTML = '<p style="color:red; text-align:center; margin-top: 20px;">Error: Module not found in the database.</p>';
+            chatWindow.innerHTML = '<p style="color:red; text-align:center; margin-top: 20px;">Error: Module not found.</p>';
         }
     } catch (error) {
         console.error("Cloud connection failed:", error);
@@ -65,7 +85,166 @@ async function fetchModuleFromCloud() {
 
 initializeUser();
 
-// 5. MOOD METER LOGIC (With Hardcoded Styling for Bulletproofing)
+// ==========================================
+// MODE A: GAMIFIED QUIZ LOGIC
+// ==========================================
+
+function initQuizMode() {
+    // Ensure the chat window isn't styled like a chatbox for the quiz
+    chatWindow.style.backgroundColor = '#ffffff';
+    chatWindow.style.border = 'none';
+    chatWindow.style.boxShadow = 'none';
+    
+    loadQuizQuestion();
+}
+
+function loadQuizQuestion() {
+    const q = scenarioData.questions[quizState.currentIndex];
+    const total = scenarioData.questions.length;
+
+    // Render Gamified Header and Question
+    chatWindow.innerHTML = `
+        <div style="padding: 10px; text-align: center; animation: slideIn 0.3s ease-out;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; padding: 15px 20px; background: #f8f9fa; border-radius: 12px; border: 2px solid #eaeaea; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                <span style="color: #666; font-size: 1.1rem;">📝 Q ${quizState.currentIndex + 1} / ${total}</span>
+                <span style="color: #ff5722; font-size: 1.2rem; font-weight: 800;">🔥 Streak x${quizState.streak}</span>
+                <span style="color: #00563f; font-size: 1.2rem; font-weight: 800;">🏆 ${quizState.score}</span>
+            </div>
+            <h2 style="color: #333; line-height: 1.5; font-size: 1.6rem; margin-bottom: 20px;">${q.question}</h2>
+        </div>
+    `;
+
+    // Render a 2x2 Grid for the answers
+    buttonGrid.innerHTML = ''; 
+    buttonGrid.style.gridTemplateColumns = '1fr 1fr'; 
+
+    q.options.forEach((optText, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'action-btn';
+        btn.style.textAlign = 'center';
+        btn.style.fontSize = '1.1rem';
+        btn.style.padding = '20px';
+        btn.innerText = optText;
+        btn.onclick = (e) => handleQuizAnswer(index, q, e.target);
+        buttonGrid.appendChild(btn);
+    });
+}
+
+function handleQuizAnswer(selectedIndex, qData, clickedBtn) {
+    const buttons = buttonGrid.querySelectorAll('button');
+    buttons.forEach(btn => btn.disabled = true);
+
+    const isCorrect = (selectedIndex === qData.correctIndex);
+    let ptsEarned = 0;
+
+    if (isCorrect) {
+        quizState.streak++;
+        ptsEarned = 100 + (quizState.streak * 25); // Combo multiplier!
+        quizState.score += ptsEarned;
+        
+        clickedBtn.style.backgroundColor = '#d4edda'; 
+        clickedBtn.style.borderColor = '#28a745'; 
+        clickedBtn.style.color = '#155724'; 
+        clickedBtn.innerHTML = `✅ ${qData.options[selectedIndex]}`;
+    } else {
+        quizState.streak = 0; // Break the combo
+        quizState.mistakes++;
+        
+        clickedBtn.style.backgroundColor = '#f8d7da'; 
+        clickedBtn.style.borderColor = '#dc3545'; 
+        clickedBtn.style.color = '#721c24'; 
+        clickedBtn.innerHTML = `❌ ${qData.options[selectedIndex]}`;
+
+        // Reveal the right answer
+        const correctBtn = buttons[qData.correctIndex];
+        if (correctBtn) {
+            correctBtn.style.backgroundColor = '#d4edda'; 
+            correctBtn.style.borderColor = '#28a745'; 
+            correctBtn.style.color = '#155724'; 
+            correctBtn.innerHTML = `✅ ${qData.options[qData.correctIndex]}`;
+        }
+    }
+    
+    showQuizFeedbackPanel(isCorrect, ptsEarned, qData.feedback);
+}
+
+function showQuizFeedbackPanel(isCorrect, ptsEarned, feedbackText) {
+    removeFeedbackPanel(); 
+    const panel = document.createElement('div');
+    panel.id = 'active-feedback'; 
+    panel.className = isCorrect ? 'feedback-panel panel-correct' : 'feedback-panel panel-incorrect';
+    
+    let icon = isCorrect ? `🎉 Correct! (+${ptsEarned} pts)` : '❌ Incorrect';
+    panel.innerHTML = `<h4 style="margin-top:0; margin-bottom:10px;">${icon}</h4> <p style="margin-bottom:15px;">${feedbackText}</p>`;
+
+    const actionBtn = document.createElement('button');
+    actionBtn.className = 'continue-btn';
+    
+    if (quizState.currentIndex + 1 >= scenarioData.questions.length) {
+        actionBtn.innerText = 'Finish Challenge ✔';
+        actionBtn.onclick = () => { 
+            removeFeedbackPanel(); 
+            completeQuizSimulation(); 
+        };
+    } else {
+        actionBtn.innerText = 'Next Question ➔';
+        actionBtn.onclick = () => { 
+            removeFeedbackPanel(); 
+            quizState.currentIndex++;
+            loadQuizQuestion(); 
+        };
+    }
+    
+    panel.appendChild(actionBtn);
+    controlsSection.appendChild(panel); 
+}
+
+async function completeQuizSimulation() {
+    sessionData.endTime = new Date().getTime();
+
+    // Reset grid layout for the save screen
+    buttonGrid.style.gridTemplateColumns = '1fr'; 
+    buttonGrid.innerHTML = '<p style="text-align:center; color:#666;">Saving your high score to the HR Database...</p>';
+    
+    chatWindow.innerHTML = `
+        <div style="text-align:center; padding: 40px 20px;">
+            <h1 style="font-size: 4rem; margin-bottom: 10px;">🏆</h1>
+            <h2 style="color: #00563f; margin-bottom: 15px; font-size: 2rem;">Challenge Complete!</h2>
+            <p style="font-size: 1.3rem; color: #555;">Final Score: <strong style="color: #333;">${quizState.score}</strong></p>
+        </div>
+    `;
+
+    // Calculate a standard 0-100% for the analytics dashboard
+    const totalQ = scenarioData.questions.length;
+    const correctAnswers = totalQ - quizState.mistakes;
+    const percentageScore = Math.round((correctAnswers / totalQ) * 100);
+
+    const { data, error } = await sbClient
+        .from('training_logs')
+        .insert([{
+            email: sessionData.employeeEmail, 
+            module_name: sessionData.moduleName,
+            score: percentageScore,
+            final_mood_score: 50, // N/A for quizzes
+            mistakes: quizState.mistakes.toString() 
+        }]);
+
+    if (error) {
+        console.error("SUPABASE CONNECTION ERROR:", error);
+        buttonGrid.innerHTML = '<p style="color:red; text-align:center;">Error saving data. Please contact IT.</p>';
+    } else {
+        buttonGrid.innerHTML = `
+            <div style="text-align:center;">
+                <a href="index.html" style="padding: 12px 24px; background: #00563f; color: white; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 1.1rem;">Return to Hub</a>
+            </div>`;
+    }
+}
+
+
+// ==========================================
+// MODE B: SCENARIO LOGIC (Untouched)
+// ==========================================
+
 function updateMoodMeter(change) {
     currentMood += change;
     if (currentMood > 100) currentMood = 100;
@@ -100,7 +279,6 @@ function initializeMoodMeter() {
     updateMoodMeter(0); 
 }
 
-// 6. CHAT LOGIC
 function addMessage(text, sender) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${sender}-message`;
@@ -123,7 +301,6 @@ window.handleChoice = function(selectedOption, allOptions, clickedBtn) {
         return;
     }
 
-    // WE REMOVED THE EARLY EXIT HERE SO IT ALWAYS PRINTS THE CHAT BUBBLE
     addMessage(selectedOption.text, 'employee');
 
     sessionData.choicesLog.push({
@@ -152,7 +329,6 @@ window.handleChoice = function(selectedOption, allOptions, clickedBtn) {
         }
     }
     
-    // Always show the feedback panel
     showFeedbackPanel(selectedOption);
 };
 
@@ -168,12 +344,11 @@ function showFeedbackPanel(selectedOption) {
     const actionBtn = document.createElement('button');
     actionBtn.className = 'continue-btn';
     
-    // NEW LOGIC: Check if this was the last step
     if (selectedOption.nextStep === 'endModule') {
         actionBtn.innerText = 'Finish Simulation ✔';
         actionBtn.onclick = () => { 
             removeFeedbackPanel(); 
-            completeSimulation(); // Only exit the simulation AFTER they click Finish
+            completeSimulation(); 
         };
     } else {
         actionBtn.innerText = 'Continue ➔';
@@ -199,6 +374,8 @@ function loadStep(stepId) {
     
     addMessage(stepData.customerText, 'customer');
     buttonGrid.innerHTML = ''; 
+    buttonGrid.style.gridTemplateColumns = '1fr'; // Ensure scenarios stay full width
+    
     stepData.options.forEach(option => {
         const btn = document.createElement('button');
         btn.className = 'action-btn';
@@ -208,7 +385,6 @@ function loadStep(stepId) {
     });
 }
 
-// 7. SILENT DATA EXPORT
 async function completeSimulation() {
     sessionData.endTime = new Date().getTime();
     sessionData.finalMoodScore = currentMood;
