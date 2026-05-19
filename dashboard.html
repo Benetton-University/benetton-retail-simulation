@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Benetton Training Hub - Analytics & Live Monitor</title>
+    <title>Benetton Training Hub - Analytics</title>
     <style>
-        /* Base Reset & Layout */
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: #f4f7f6; color: #333; overflow-x: hidden; }
         
-        /* Navigation Sidebar */
+        /* Sidebar */
         .floating-hamburger { position: fixed; top: 20px; left: 20px; font-size: 1.8rem; background: white; border: 2px solid #00563f; color: #00563f; border-radius: 8px; cursor: pointer; z-index: 990; padding: 5px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.2s; }
         .floating-hamburger:hover { background: #00563f; color: white; }
         .slide-menu { position: fixed; top: 0; left: -280px; width: 250px; height: 100vh; background-color: #00563f; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.2); transition: left 0.3s ease-in-out; z-index: 1000; }
@@ -21,44 +20,18 @@
         .overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 999; }
         .overlay.active { display: block; }
 
-        /* Main Container */
         .main-content { width: 100%; max-width: 1200px; margin: 0 auto; padding: 80px 30px 40px 30px; }
         .header { margin-bottom: 30px; }
-        .header h1 { color: #333; font-size: 2rem; margin-bottom: 5px; }
-        .header p { color: #666; }
-
-        /* Top Cards */
         .cards-container { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 30px; }
         .card { background: white; flex: 1; min-width: 250px; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #00563f; }
-        .card h3 { font-size: 0.85rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
-        .card .value { font-size: 2rem; font-weight: bold; color: #333; }
-        .card .sub-text { font-size: 0.9rem; color: #dc3545; font-weight: bold; margin-top: 5px;}
-
-        /* Charts Area */
-        .charts-container { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 40px; }
+        .value { font-size: 2rem; font-weight: bold; }
+        .charts-container { display: flex; flex-wrap: wrap; gap: 20px; }
         .chart-box { background: white; flex: 1; min-width: 300px; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); height: 350px; }
-        .chart-box h3 { text-align: center; margin-bottom: 15px; font-size: 1.1rem; color: #444; }
-        .canvas-container { position: relative; height: 280px; width: 100%; }
-        
-        /* --- NEW: Live Monitor Embedded Styles --- */
-        .live-panel { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 5px solid #22c55e; margin-bottom: 40px; display: none; } /* Hidden by default */
-        .live-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
-        .monitor-pulse { display: inline-block; width: 12px; height: 12px; background-color: #22c55e; border-radius: 50%; animation: pulse 1.5s infinite; margin-right: 8px; }
-        @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
-        
-        .question-block { background: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #eaeaea; }
-        .option-row { margin-top: 15px; }
-        .option-meta { display: flex; justify-content: space-between; font-size: 0.95rem; margin-bottom: 6px; color: #555; }
-        .progress-track { background: #e2e8f0; height: 16px; border-radius: 4px; overflow: hidden; position: relative; }
-        .progress-fill { background: #00563f; width: 0%; height: 100%; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-
-        @media (max-width: 768px) { .cards-container, .charts-container { flex-direction: column; } }
     </style>
 </head>
 <body>
 
     <button id="menu-toggle" class="floating-hamburger">☰</button>
-
     <nav id="sidebar" class="slide-menu">
         <button id="close-menu" class="close-btn">&times;</button>
         <h3>Benetton Training Hub</h3>
@@ -66,285 +39,60 @@
         <a href="manage-modules.html" class="menu-link">⚙️ Manage Modules</a>
         <a href="index.html" class="menu-link">⬅️ Back to Hub</a>
     </nav>
-
     <div id="sidebar-overlay" class="overlay"></div>
 
     <main class="main-content">
-        
-        <div id="admin-live-monitor" class="live-panel">
-            <div class="live-header">
-                <div>
-                    <h2 style="color: #333; display: flex; align-items: center;"><span class="monitor-pulse"></span> Live Quiz Monitor</h2>
-                    <p style="color: #666; font-size: 0.9rem; margin-top: 5px;">Real-time cohort tracking. Only visible to Administrators.</p>
-                </div>
-            </div>
-            
-            <div style="display: flex; gap: 15px; margin-bottom: 25px;">
-                <select id="module-selector" onchange="changeActiveTargetModule()" style="flex-grow: 1; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 1rem;">
-                    <option value="">-- Select Active Quiz Target Module --</option>
-                </select>
-                <button onclick="clearLiveCache()" style="background: #dc3545; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s;">Reset Live Board</button>
-            </div>
-
-            <div id="live-render-zone">
-                <p style="text-align: center; color: #999; padding: 20px; font-style: italic;">Select an active quiz target module from the dropdown filter menu above to begin data visualization tracking.</p>
-            </div>
-        </div>
-
         <div class="header">
             <h1>Simulation Performance</h1>
-            <p>Historical metrics compiled from all employee training modules.</p>
+            <p>Historical metrics compiled from training logs.</p>
         </div>
 
         <div class="cards-container">
-            <div class="card">
-                <h3>Total Simulations Completed</h3>
-                <div class="value" id="total-sims">0</div>
-                <div class="sub-text" style="color: #28a745;">Overall Engagement</div>
-            </div>
-            <div class="card" style="border-left-color: #dc3545;">
-                <h3>Highest Risk Module (Most Errors)</h3>
-                <div class="value" id="risk-module" style="font-size: 1.2rem; margin-top: 10px;">Loading...</div>
-                <div class="sub-text" id="risk-stat">-- avg errors</div>
-            </div>
-            <div class="card" style="border-left-color: #ffc107;">
-                <h3>Lowest Customer Satisfaction</h3>
-                <div class="value" id="mood-module" style="font-size: 1.2rem; margin-top: 10px;">Loading...</div>
-                <div class="sub-text" id="mood-stat" style="color: #d39e00;">-- avg mood</div>
-            </div>
+            <div class="card"><h3>Total Simulations</h3><div class="value" id="total-sims">0</div></div>
+            <div class="card"><h3>Highest Risk Module</h3><div class="value" id="risk-module" style="font-size:1.2rem;">--</div></div>
+            <div class="card"><h3>Avg Customer Mood</h3><div class="value" id="mood-module" style="font-size:1.2rem;">--</div></div>
         </div>
 
         <div class="charts-container">
-            <div class="chart-box">
-                <h3>Average Policy Errors by Module</h3>
-                <div class="canvas-container">
-                    <canvas id="errorsChart"></canvas>
-                </div>
-            </div>
-            <div class="chart-box">
-                <h3>Average Customer Mood by Module</h3>
-                <div class="canvas-container">
-                    <canvas id="moodChart"></canvas>
-                </div>
-            </div>
+            <div class="chart-box"><canvas id="errorsChart"></canvas></div>
+            <div class="chart-box"><canvas id="moodChart"></canvas></div>
         </div>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     <script>
-        const dbUrl = 'https://lttebmghqpahjclycxau.supabase.co'; 
-        const dbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0dGVibWdocXBhaGpjbHljeGF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NDE4NDIsImV4cCI6MjA5MzAxNzg0Mn0.bwsArSg1M4GO0mJV83jttCikkeoXj_HL_yEsRlxptzE'; 
-        const supabase = window.supabase.createClient(dbUrl, dbKey);
+        // Renamed variable to 'dashboardSupabase' to prevent variable declaration collisions
+        const dashboardSupabase = window.supabase.createClient('https://lttebmghqpahjclycxau.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0dGVibWdocXBhaGpjbHljeGF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NDE4NDIsImV4cCI6MjA5MzAxNzg0Mn0.bwsArSg1M4GO0mJV83jttCikkeoXj_HL_yEsRlxptzE');
 
-        // --- GLOBAL VARIABLES FOR LIVE MONITOR ---
-        let activeModuleName = "";
-        let loadedQuizSchema = null;
-        let localTallies = {}; 
-        let realtimeChannel = null;
-
-        // --- AUTHENTICATION & INITIALIZATION ---
-        document.addEventListener('DOMContentLoaded', async () => {
-            // 1. Verify User is Logged In
-            const { data: authData } = await supabase.auth.getSession();
-            if (!authData.session) {
-                window.location.href = "index.html"; 
-                return;
-            }
-
-            // 2. Role Check: Reveal Live Monitor ONLY if Admin
-            const email = authData.session.user.email;
-            const { data: roleData } = await supabase.from('user_roles').select('role').eq('email', email).single();
-            
-            if (roleData && roleData.role === 'admin') {
-                document.getElementById('admin-live-monitor').style.display = 'block';
-                fetchAvailableQuizzes(); // Populate the live monitor dropdown
-            }
-
-            // 3. Always Load the Global Analytics Charts
-            fetchAnalytics();
-        });
-
-        // ==========================================
-        // LIVE MONITOR LOGIC
-        // ==========================================
-        async function fetchAvailableQuizzes() {
-            const { data } = await supabase.from('module_content').select('module_name, scenario_data').eq('module_type', 'quiz');
-            const select = document.getElementById('module-selector');
-            if (data) {
-                data.forEach(m => {
-                    let opt = document.createElement('option');
-                    opt.value = m.module_name;
-                    opt.innerText = m.module_name;
-                    opt.dataset.schema = JSON.stringify(m.scenario_data);
-                    select.appendChild(opt);
-                });
-            }
-        }
-
-        async function changeActiveTargetModule() {
-            const select = document.getElementById('module-selector');
-            activeModuleName = select.value;
-            
-            if (!activeModuleName) {
-                document.getElementById('live-render-zone').innerHTML = '<p style="text-align:center;color:#999;">Select an active quiz target module to begin live tracking.</p>';
-                return;
-            }
-
-            const selectedOpt = select.options[select.selectedIndex];
-            loadedQuizSchema = JSON.parse(selectedOpt.dataset.schema);
-
-            localTallies = {};
-            loadedQuizSchema.questions.forEach((q, idx) => {
-                localTallies[idx] = { 0: 0, 1: 0, 2: 0, 3: 0, _total: 0 };
-            });
-
-            const { data } = await supabase.from('quiz_responses').select('*').eq('module_name', activeModuleName);
-            if (data) {
-                data.forEach(row => {
-                    if (localTallies[row.question_index]) {
-                        localTallies[row.question_index][row.selected_index]++;
-                        localTallies[row.question_index]._total++;
-                    }
-                });
-            }
-
-            renderMetricsUI();
-            listenToLiveTraffic();
-        }
-
-        function listenToLiveTraffic() {
-            if (realtimeChannel) supabase.removeChannel(realtimeChannel);
-
-            realtimeChannel = supabase.channel('live-quiz-feed')
-                .on('postgres_changes', { 
-                    event: 'INSERT', 
-                    schema: 'public', 
-                    table: 'quiz_responses',
-                    filter: `module_name=eq.${activeModuleName}`
-                }, payload => {
-                    const row = payload.new;
-                    if (localTallies[row.question_index]) {
-                        localTallies[row.question_index][row.selected_index]++;
-                        localTallies[row.question_index]._total++;
-                        renderMetricsUI(); 
-                    }
-                })
-                .subscribe();
-        }
-
-        function renderMetricsUI() {
-            const zone = document.getElementById('live-render-zone');
-            zone.innerHTML = '';
-
-            loadedQuizSchema.questions.forEach((q, qIdx) => {
-                const stats = localTallies[qIdx];
-                let questionHTML = `
-                    <div class="question-block">
-                        <h3 style="color:#333; font-size:1.1rem; margin-bottom: 5px;">Q${qIdx + 1}: ${q.question}</h3>
-                        <p style="font-size:0.85rem; color:#888; margin-bottom:15px;">Total responses: <strong>${stats._total}</strong></p>
-                `;
-
-                q.options.forEach((optText, oIdx) => {
-                    const count = stats[oIdx];
-                    const percentage = stats._total > 0 ? Math.round((count / stats._total) * 100) : 0;
-                    const isCorrect = oIdx === q.correctIndex;
-
-                    questionHTML += `
-                        <div class="option-row">
-                            <div class="option-meta">
-                                <span>${isCorrect ? '✅ ' : '❌ '}${optText}</span>
-                                <span><strong>${count} votes</strong> (${percentage}%)</span>
-                            </div>
-                            <div class="progress-track">
-                                <div class="progress-fill" style="width: ${percentage}%; background-color: ${isCorrect ? '#22c55e' : '#ef4444'};"></div>
-                            </div>
-                        </div>
-                    `;
-                });
-
-                questionHTML += `</div>`;
-                zone.insertAdjacentHTML('beforeend', questionHTML);
-            });
-        }
-
-        async function clearLiveCache() {
-            if (!activeModuleName) return;
-            const check = confirm("Permanently purge live polling metrics for this module? Historical results in the charts below will be untouched.");
-            if (check) {
-                await supabase.from('quiz_responses').delete().eq('module_name', activeModuleName);
-                changeActiveTargetModule(); // Refresh the UI
-            }
-        }
-
-        // ==========================================
-        // HISTORICAL CHARTS LOGIC
-        // ==========================================
         async function fetchAnalytics() {
-            try {
-                const { data, error } = await supabase.from('training_logs').select('*');
-                if (error) throw error;
-                if (!data || data.length === 0) {
-                    document.getElementById('risk-module').innerText = "No Data Yet";
-                    document.getElementById('mood-module').innerText = "No Data Yet";
-                    return;
-                }
-                
-                document.getElementById('total-sims').innerText = data.length;
+            const { data, error } = await dashboardSupabase.from('training_logs').select('*');
+            if (error || !data || data.length === 0) return;
 
-                let moduleStats = {};
-                data.forEach(log => {
-                    let mod = log.module_name || "Unknown Module";
-                    if (!moduleStats[mod]) { moduleStats[mod] = { runs: 0, totalMood: 0, totalMistakes: 0 }; }
-                    moduleStats[mod].runs += 1;
-                    moduleStats[mod].totalMood += parseInt(log.final_mood_score) || 0;
-                    moduleStats[mod].totalMistakes += parseInt(log.mistakes) || 0; 
-                });
+            document.getElementById('total-sims').innerText = data.length;
+            
+            let modStats = {};
+            data.forEach(log => {
+                if(!modStats[log.module_name]) modStats[log.module_name] = {m:0, mood:0, count:0};
+                modStats[log.module_name].m += parseInt(log.mistakes) || 0;
+                modStats[log.module_name].mood += parseInt(log.final_mood_score) || 0;
+                modStats[log.module_name].count += 1;
+            });
 
-                let labels = [], avgMistakesData = [], avgMoodData = [];
-                let highestRiskModule = "None", maxAvgMistakes = -1;
-                let lowestMoodModule = "None", minAvgMood = 101;
+            let labels = Object.keys(modStats);
+            let errs = labels.map(l => (modStats[l].m/modStats[l].count).toFixed(1));
+            let moods = labels.map(l => Math.round(modStats[l].mood/modStats[l].count));
+            
+            document.getElementById('risk-module').innerText = labels[0] || "None";
+            document.getElementById('mood-module').innerText = (moods[0] || 0) + "%";
 
-                for (const [moduleName, stats] of Object.entries(moduleStats)) {
-                    let avgMistakes = parseFloat((stats.totalMistakes / stats.runs).toFixed(1));
-                    let avgMood = Math.round(stats.totalMood / stats.runs);
-
-                    labels.push(moduleName);
-                    avgMistakesData.push(avgMistakes);
-                    avgMoodData.push(avgMood);
-
-                    if (avgMistakes > maxAvgMistakes) { maxAvgMistakes = avgMistakes; highestRiskModule = moduleName; }
-                    if (avgMood < minAvgMood) { minAvgMood = avgMood; lowestMoodModule = moduleName; }
-                }
-
-                document.getElementById('risk-module').innerText = highestRiskModule;
-                document.getElementById('risk-stat').innerText = `${maxAvgMistakes} errors per run`;
-                document.getElementById('mood-module').innerText = lowestMoodModule;
-                document.getElementById('mood-stat').innerText = `${minAvgMood}% avg mood score`;
-
-                drawCharts(labels, avgMistakesData, avgMoodData);
-            } catch (err) {
-                document.getElementById('risk-module').innerText = "Database Error";
-            }
+            new Chart(document.getElementById('errorsChart'), { type: 'bar', data: { labels, datasets: [{ label: 'Avg Errors', data: errs, backgroundColor: '#dc3545' }] } });
+            new Chart(document.getElementById('moodChart'), { type: 'bar', data: { labels, datasets: [{ label: 'Avg Mood', data: moods, backgroundColor: '#ffc107' }] } });
         }
 
-        function drawCharts(labels, errorsData, moodData) {
-            new Chart(document.getElementById('errorsChart'), {
-                type: 'bar',
-                data: { labels: labels, datasets: [{ label: 'Avg Policy Errors', data: errorsData, backgroundColor: '#dc3545', borderRadius: 4 }] },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
-            });
-            new Chart(document.getElementById('moodChart'), {
-                type: 'bar',
-                data: { labels: labels, datasets: [{ label: 'Avg Customer Mood (%)', data: moodData, backgroundColor: '#ffc107', borderRadius: 4 }] },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } }
-            });
-        }
-    </script>
+        fetchAnalytics();
 
-    <script>
-        // Sidebar Toggle Logic
+        // Menu logic
         const menuToggle = document.getElementById('menu-toggle');
         const closeMenu = document.getElementById('close-menu');
         const sidebar = document.getElementById('sidebar');
