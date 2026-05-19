@@ -139,6 +139,19 @@ function handleQuizAnswer(selectedIndex, qData, clickedBtn) {
     const isCorrect = (selectedIndex === qData.correctIndex);
     let ptsEarned = 0;
 
+    // --- NEW: LIVE BROADCAST TO INSTRUCTOR MONITOR ---
+    sbClient
+        .from('quiz_responses')
+        .insert([{
+            module_name: sessionData.moduleName,
+            question_index: quizState.currentIndex,
+            selected_index: selectedIndex
+        }])
+        .then(({ error }) => { 
+            if (error) console.error("Realtime broadcast dropped:", error); 
+        });
+    // ------------------------------------------------
+
     if (isCorrect) {
         quizState.streak++;
         ptsEarned = 100 + (quizState.streak * 25); // Combo multiplier!
