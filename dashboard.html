@@ -51,7 +51,7 @@
         .live-panel { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 5px solid #22c55e; min-height: 500px; }
         .live-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
         .monitor-pulse { display: inline-block; width: 12px; height: 12px; background-color: #22c55e; border-radius: 50%; animation: pulse 1.5s infinite; }
-        .tab-btn.active .monitor-pulse { background-color: white; } /* Turns pulse white when tab is active */
+        .tab-btn.active .monitor-pulse { background-color: white; }
         @keyframes pulse { 0% { opacity: 0.4; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 50% { opacity: 1; box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); } 100% { opacity: 0.4; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
         
         .question-block { background: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #eaeaea; }
@@ -158,24 +158,18 @@
         const dbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0dGVibWdocXBhaGpjbHljeGF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NDE4NDIsImV4cCI6MjA5MzAxNzg0Mn0.bwsArSg1M4GO0mJV83jttCikkeoXj_HL_yEsRlxptzE'; 
         const supabase = window.supabase.createClient(dbUrl, dbKey);
 
-        // --- TAB SWITCHING LOGIC ---
         function switchTab(event, tabId) {
-            // Hide all contents and remove active states
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            
-            // Show targeted content and highlight button
             document.getElementById(tabId).classList.add('active');
             event.currentTarget.classList.add('active');
         }
 
-        // --- GLOBAL VARIABLES FOR LIVE MONITOR ---
         let activeModuleName = "";
         let loadedQuizSchema = null;
         let localTallies = {}; 
         let realtimeChannel = null;
 
-        // --- AUTHENTICATION & INITIALIZATION ---
         document.addEventListener('DOMContentLoaded', async () => {
             const { data: authData } = await supabase.auth.getSession();
             if (!authData.session) {
@@ -183,16 +177,18 @@
                 return;
             }
 
-            // Role Check: Reveal Live Monitor Tab ONLY if Admin
-            const email = authData.session.user.email;
-            const { data: roleData } = await supabase.from('user_roles').select('role').eq('email', email).single();
-            
-            if (roleData && roleData.role === 'admin') {
-                document.getElementById('live-tab-btn').style.display = 'flex'; // Reveals the tab button
-                fetchAvailableQuizzes(); // Populate the live monitor dropdown
+            try {
+                const email = authData.session.user.email;
+                const { data: roleData } = await supabase.from('user_roles').select('role').eq('email', email).single();
+                if (roleData && roleData.role === 'admin') {
+                    document.getElementById('live-tab-btn').style.display = 'flex'; 
+                    fetchAvailableQuizzes(); 
+                }
+            } catch (e) {
+                console.warn("Role checks safely bypassed.", e);
             }
 
-            fetchAnalytics(); // Always load historical charts
+            fetchAnalytics(); 
         });
 
         // ==========================================
@@ -303,7 +299,7 @@
             const check = confirm("Permanently purge live polling metrics for this module? Historical results in the charts tab will be untouched.");
             if (check) {
                 await supabase.from('quiz_responses').delete().eq('module_name', activeModuleName);
-                changeActiveTargetModule(); // Refresh the UI
+                changeActiveTargetModule(); 
             }
         }
 
@@ -314,9 +310,14 @@
             try {
                 const { data, error } = await supabase.from('training_logs').select('*');
                 if (error) throw error;
+                
+                // FIXED: Safety net for empty data situations
                 if (!data || data.length === 0) {
+                    document.getElementById('total-sims').innerText = "0";
                     document.getElementById('risk-module').innerText = "No Data Yet";
+                    document.getElementById('risk-stat').innerText = "--";
                     document.getElementById('mood-module').innerText = "No Data Yet";
+                    document.getElementById('mood-stat').innerText = "--";
                     return;
                 }
                 
@@ -354,6 +355,7 @@
 
                 drawCharts(labels, avgMistakesData, avgMoodData);
             } catch (err) {
+                console.error(err);
                 document.getElementById('risk-module').innerText = "Database Error";
             }
         }
@@ -373,7 +375,6 @@
     </script>
 
     <script>
-        // Sidebar Toggle Logic
         const menuToggle = document.getElementById('menu-toggle');
         const closeMenu = document.getElementById('close-menu');
         const sidebar = document.getElementById('sidebar');

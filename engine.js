@@ -1,20 +1,17 @@
 // ==========================================
 // THE MASTER ENGINE (engine.js)
-// Supports: Scenarios & Gamified Quizzes
+// Supports: Scenarios, Gamified Quizzes, & Assessments
 // ==========================================
 
-// 1. UNIQUE CONNECTION 
 const dbUrl = 'https://lttebmghqpahjclycxau.supabase.co'; 
 const dbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0dGVibWdocXBhaGpjbHljeGF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NDE4NDIsImV4cCI6MjA5MzAxNzg0Mn0.bwsArSg1M4GO0mJV83jttCikkeoXj_HL_yEsRlxptzE'; 
 
 const sbClient = window.supabase.createClient(dbUrl, dbKey);
 
-// 2. UI VARIABLES 
 const chatWindow = document.getElementById('chat-window');
 const buttonGrid = document.querySelector('.button-grid');
 const controlsSection = document.querySelector('.controls'); 
 
-// 3. TELEMETRY & STATE
 const sessionData = {
     employeeEmail: "", 
     moduleName: window.currentModuleName || "Unknown Module", 
@@ -28,7 +25,6 @@ const sessionData = {
 let currentMood = 50; 
 let scenarioData = null;
 
-// Gamified Quiz State
 let quizState = {
     currentIndex: 0,
     score: 0,
@@ -36,7 +32,6 @@ let quizState = {
     mistakes: 0
 };
 
-// 4. SECURITY & INITIALIZATION
 async function initializeUser() {
     const { data, error } = await sbClient.auth.getSession();
     
@@ -49,12 +44,10 @@ async function initializeUser() {
     }
 }
 
-// 5. CLOUD ROUTER
 async function fetchModuleFromCloud() {
     try {
         chatWindow.innerHTML = '<p style="text-align:center; color:#666; margin-top: 20px;">Loading training module from the cloud...</p>';
 
-        // Notice we are now asking for the module_type as well
         const { data, error } = await sbClient
             .from('module_content')
             .select('scenario_data, module_type')
@@ -64,15 +57,14 @@ async function fetchModuleFromCloud() {
 
         if (data && data.length > 0) {
             scenarioData = data[0].scenario_data; 
-            const moduleType = data[0].module_type || 'scenario'; // Default to scenario if missing
+            const moduleType = data[0].module_type || 'scenario'; 
 
             chatWindow.innerHTML = ''; 
             
-            // ROUTING LOGIC
             if (moduleType === 'quiz') {
                 initQuizMode();
             } else if (moduleType === 'assessment') {
-                initAssessmentMode(); // <--- ROUTE TO MODE C
+                initAssessmentMode();
             } else {
                 loadStep('start'); 
             }
@@ -92,11 +84,9 @@ initializeUser();
 // ==========================================
 
 function initQuizMode() {
-    // Ensure the chat window isn't styled like a chatbox for the quiz
     chatWindow.style.backgroundColor = '#ffffff';
     chatWindow.style.border = 'none';
     chatWindow.style.boxShadow = 'none';
-    
     loadQuizQuestion();
 }
 
@@ -104,7 +94,6 @@ function loadQuizQuestion() {
     const q = scenarioData.questions[quizState.currentIndex];
     const total = scenarioData.questions.length;
 
-    // Render Gamified Header and Question
     chatWindow.innerHTML = `
         <div style="padding: 10px; text-align: center; animation: slideIn 0.3s ease-out;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; padding: 15px 20px; background: #f8f9fa; border-radius: 12px; border: 2px solid #eaeaea; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
@@ -116,7 +105,6 @@ function loadQuizQuestion() {
         </div>
     `;
 
-    // Render a 2x2 Grid for the answers
     buttonGrid.innerHTML = ''; 
     buttonGrid.style.gridTemplateColumns = '1fr 1fr'; 
 
@@ -139,7 +127,7 @@ function handleQuizAnswer(selectedIndex, qData, clickedBtn) {
     const isCorrect = (selectedIndex === qData.correctIndex);
     let ptsEarned = 0;
 
-    // --- NEW: LIVE BROADCAST TO INSTRUCTOR MONITOR ---
+    // LIVE BROADCAST
     sbClient
         .from('quiz_responses')
         .insert([{
@@ -150,11 +138,10 @@ function handleQuizAnswer(selectedIndex, qData, clickedBtn) {
         .then(({ error }) => { 
             if (error) console.error("Realtime broadcast dropped:", error); 
         });
-    // ------------------------------------------------
 
     if (isCorrect) {
         quizState.streak++;
-        ptsEarned = 100 + (quizState.streak * 25); // Combo multiplier!
+        ptsEarned = 100 + (quizState.streak * 25); 
         quizState.score += ptsEarned;
         
         clickedBtn.style.backgroundColor = '#d4edda'; 
@@ -162,7 +149,7 @@ function handleQuizAnswer(selectedIndex, qData, clickedBtn) {
         clickedBtn.style.color = '#155724'; 
         clickedBtn.innerHTML = `✅ ${qData.options[selectedIndex]}`;
     } else {
-        quizState.streak = 0; // Break the combo
+        quizState.streak = 0; 
         quizState.mistakes++;
         
         clickedBtn.style.backgroundColor = '#f8d7da'; 
@@ -170,7 +157,6 @@ function handleQuizAnswer(selectedIndex, qData, clickedBtn) {
         clickedBtn.style.color = '#721c24'; 
         clickedBtn.innerHTML = `❌ ${qData.options[selectedIndex]}`;
 
-        // Reveal the right answer
         const correctBtn = buttons[qData.correctIndex];
         if (correctBtn) {
             correctBtn.style.backgroundColor = '#d4edda'; 
@@ -217,7 +203,6 @@ function showQuizFeedbackPanel(isCorrect, ptsEarned, feedbackText) {
 async function completeQuizSimulation() {
     sessionData.endTime = new Date().getTime();
 
-    // Reset grid layout for the save screen
     buttonGrid.style.gridTemplateColumns = '1fr'; 
     buttonGrid.innerHTML = '<p style="text-align:center; color:#666;">Saving your high score to the HR Database...</p>';
     
@@ -229,7 +214,6 @@ async function completeQuizSimulation() {
         </div>
     `;
 
-    // Calculate a standard 0-100% for the analytics dashboard
     const totalQ = scenarioData.questions.length;
     const correctAnswers = totalQ - quizState.mistakes;
     const percentageScore = Math.round((correctAnswers / totalQ) * 100);
@@ -240,7 +224,7 @@ async function completeQuizSimulation() {
             email: sessionData.employeeEmail, 
             module_name: sessionData.moduleName,
             score: percentageScore,
-            final_mood_score: 50, // N/A for quizzes
+            final_mood_score: 50, 
             mistakes: quizState.mistakes.toString() 
         }]);
 
@@ -255,9 +239,8 @@ async function completeQuizSimulation() {
     }
 }
 
-
 // ==========================================
-// MODE B: SCENARIO LOGIC (Untouched)
+// MODE B: SCENARIO LOGIC
 // ==========================================
 
 function updateMoodMeter(change) {
@@ -389,7 +372,7 @@ function loadStep(stepId) {
     
     addMessage(stepData.customerText, 'customer');
     buttonGrid.innerHTML = ''; 
-    buttonGrid.style.gridTemplateColumns = '1fr'; // Ensure scenarios stay full width
+    buttonGrid.style.gridTemplateColumns = '1fr'; 
     
     stepData.options.forEach(option => {
         const btn = document.createElement('button');
@@ -429,13 +412,15 @@ async function completeSimulation() {
                 <a href="index.html" style="padding: 12px 24px; background: #00563f; color: white; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Return to Training Hub</a>
             </div>`;
     }
-}// ==========================================
+}
+
+// ==========================================
 // MODE C: FORMAL ASSESSMENT LOGIC
 // ==========================================
 
 let assessState = {
     currentIndex: 0,
-    userAnswers: [] // Stores index logs of chosen options
+    userAnswers: [] 
 };
 
 function initAssessmentMode() {
@@ -443,7 +428,6 @@ function initAssessmentMode() {
     chatWindow.style.border = 'none';
     chatWindow.style.boxShadow = 'none';
     
-    // Initialize blank tracking index slots matching question length array
     assessState.userAnswers = new Array(scenarioData.questions.length).fill(null);
     loadAssessmentQuestion();
 }
@@ -453,7 +437,6 @@ function loadAssessmentQuestion() {
     const total = scenarioData.questions.length;
     const currentSavedAnswer = assessState.userAnswers[assessState.currentIndex];
 
-    // Render Clean Exam UI Structure Header
     chatWindow.innerHTML = `
         <div style="padding: 10px; animation: slideIn 0.2s ease-out;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding: 15px 20px; background: #eaedf0; border-radius: 8px; font-weight: bold; color: #495057;">
@@ -465,7 +448,7 @@ function loadAssessmentQuestion() {
     `;
 
     buttonGrid.innerHTML = '';
-    buttonGrid.style.gridTemplateColumns = '1fr'; // Formal list format layout
+    buttonGrid.style.gridTemplateColumns = '1fr'; 
 
     q.options.forEach((optText, index) => {
         const btn = document.createElement('button');
@@ -476,7 +459,6 @@ function loadAssessmentQuestion() {
         btn.style.alignItems = 'center';
         btn.style.gap = '12px';
         
-        // Render state selection circle styles matching standard exams
         const isSelected = currentSavedAnswer === index;
         const radioIcon = isSelected ? '🔘' : '⚪';
         btn.innerHTML = `<span style="font-size:1.2rem;">${radioIcon}</span> ${optText}`;
@@ -489,7 +471,7 @@ function loadAssessmentQuestion() {
 
         btn.onclick = () => {
             assessState.userAnswers[assessState.currentIndex] = index;
-            loadAssessmentQuestion(); // Redraw selection changes instantly
+            loadAssessmentQuestion(); 
         };
         buttonGrid.appendChild(btn);
     });
@@ -498,7 +480,7 @@ function loadAssessmentQuestion() {
 }
 
 function renderAssessmentNavigationControls(total) {
-    removeFeedbackPanel(); // Clear previous layouts if any
+    removeFeedbackPanel(); 
     
     const controlPanel = document.createElement('div');
     controlPanel.id = 'active-feedback';
@@ -507,7 +489,6 @@ function renderAssessmentNavigationControls(total) {
     controlPanel.style.marginTop = '20px';
     controlPanel.style.width = '100%';
 
-    // Left Anchor: Previous Navigation
     const prevBtn = document.createElement('button');
     prevBtn.className = 'continue-btn';
     prevBtn.style.backgroundColor = '#6c757d';
@@ -519,7 +500,6 @@ function renderAssessmentNavigationControls(total) {
         loadAssessmentQuestion();
     };
 
-    // Right Anchor: Next or Submission Trigger Branch
     const nextBtn = document.createElement('button');
     nextBtn.className = 'continue-btn';
     
@@ -528,7 +508,6 @@ function renderAssessmentNavigationControls(total) {
     if (isLastQuestion) nextBtn.style.backgroundColor = '#28a745';
 
     nextBtn.onclick = () => {
-        // Enforce answering current step before changing route markers
         if (assessState.userAnswers[assessState.currentIndex] === null) {
             alert("Please select an answer option row to proceed.");
             return;
@@ -565,7 +544,6 @@ async function calculateAndSaveAssessmentResults() {
     const requiredPassMark = scenarioData.passingScore || 80;
     const hasPassed = finalPercentage >= requiredPassMark;
 
-    // Display Comprehensive Status Metrics Screen Block
     chatWindow.innerHTML = `
         <div style="text-align:center; padding: 30px 10px; animation: slideIn 0.3s ease;">
             <h1 style="font-size: 4rem; margin-bottom: 15px;">${hasPassed ? '📜' : '❌'}</h1>
@@ -592,7 +570,7 @@ async function calculateAndSaveAssessmentResults() {
             email: sessionData.employeeEmail, 
             module_name: sessionData.moduleName,
             score: finalPercentage,
-            final_mood_score: 50, // Static baseline index for exams
+            final_mood_score: 50, 
             mistakes: totalMistakesValue 
         }]);
 
