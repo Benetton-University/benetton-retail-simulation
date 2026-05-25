@@ -145,25 +145,27 @@
         let realtimeChannel = null;
 
         // --- AUTHENTICATION & INITIALIZATION ---
-        document.addEventListener('DOMContentLoaded', async () => {
-            // 1. Verify User is Logged In
-            const { data: authData } = await supabase.auth.getSession();
-            if (!authData.session) {
-                window.location.href = "index.html"; 
-                return;
-            }
+        let dashboardInitialized = false;
+        supabase.auth.onAuthStateChange(async (event, session) => {
+            if (dashboardInitialized) return;
+            if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+                dashboardInitialized = true;
+                if (!session) {
+                    window.location.href = "index.html";
+                    return;
+                }
 
-            // 2. Role Check: Reveal Live Monitor ONLY if Admin
-            const email = authData.session.user.email;
-            const { data: roleData } = await supabase.from('user_roles').select('role').eq('email', email).single();
-            
-            if (roleData && roleData.role === 'admin') {
-                document.getElementById('admin-live-monitor').style.display = 'block';
-                fetchAvailableQuizzes(); // Populate the live monitor dropdown
-            }
+                // Role Check: Reveal Live Monitor ONLY if Admin
+                const email = session.user.email;
+                const { data: roleData } = await supabase.from('user_roles').select('role').eq('email', email).single();
 
-            // 3. Always Load the Global Analytics Charts
-            fetchAnalytics();
+                if (roleData && roleData.role === 'admin') {
+                    document.getElementById('admin-live-monitor').style.display = 'block';
+                    fetchAvailableQuizzes();
+                }
+
+                fetchAnalytics();
+            }
         });
 
         // ==========================================
@@ -326,6 +328,9 @@
                 drawCharts(labels, avgMistakesData, avgMoodData);
             } catch (err) {
                 document.getElementById('risk-module').innerText = "Database Error";
+                document.getElementById('risk-stat').innerText = "";
+                document.getElementById('mood-module').innerText = "Database Error";
+                document.getElementById('mood-stat').innerText = "";
             }
         }
 
