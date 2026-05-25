@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\siddh\\\\Documents\\\\Benetton-retail-sim\" -File -Recurse)",
+      "Bash(Select-Object FullName)",
+      "Bash(Sort-Object FullName)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\siddh\\\\Documents\\\\Benetton-retail-sim\" -Recurse)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)",
+      "Bash(ls -la \"c:\\\\Users\\\\siddh\\\\Documents\\\\Benetton-retail-sim\\\\\" 2>/dev/null | head -50)",
+      "Read(//c/Users/siddh/Documents/Benetton-retail-sim\" 2>/dev/**)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\siddh\\\\Documents\\\\Benetton-retail-sim\" -MaxDepth 1 | Where-Object { -not $_.PSIsContainer } | Select-Object Name | Sort-Object Name)",
+      "Bash(Get-ChildItem \"c:\\\\Users\\\\siddh\\\\Documents\\\\Benetton-retail-sim\" -File)",
+      "Bash(Select-Object Name)",
+      "PowerShell(ls \"c:\\\\Users\\\\siddh\\\\Documents\\\\Benetton-retail-sim\" | Where-Object { -not $_.PSIsContainer } | ForEach-Object { $_.Name })"
+    ]
+  }
+}
