@@ -40,18 +40,6 @@
         .chart-box h3 { text-align: center; margin-bottom: 15px; font-size: 1.1rem; color: #444; }
         .canvas-container { position: relative; height: 280px; width: 100%; }
         
-        /* --- NEW: Live Monitor Embedded Styles --- */
-        .live-panel { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 5px solid #22c55e; margin-bottom: 40px; display: none; } /* Hidden by default */
-        .live-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
-        .monitor-pulse { display: inline-block; width: 12px; height: 12px; background-color: #22c55e; border-radius: 50%; animation: pulse 1.5s infinite; margin-right: 8px; }
-        @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
-        
-        .question-block { background: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #eaeaea; }
-        .option-row { margin-top: 15px; }
-        .option-meta { display: flex; justify-content: space-between; font-size: 0.95rem; margin-bottom: 6px; color: #555; }
-        .progress-track { background: #e2e8f0; height: 16px; border-radius: 4px; overflow: hidden; position: relative; }
-        .progress-fill { background: #00563f; width: 0%; height: 100%; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-
         @media (max-width: 768px) { .cards-container, .charts-container { flex-direction: column; } }
     </style>
 </head>
@@ -63,6 +51,7 @@
         <button id="close-menu" class="close-btn">&times;</button>
         <h3>Benetton Training Hub</h3>
         <a href="dashboard.html" class="menu-link" style="background-color: rgba(255,255,255,0.1); border-left: 4px solid #fff;">📊 Analytics Dashboard</a>
+        <a href="live-monitor.html" class="menu-link">📡 Live Monitor</a>
         <a href="manage-modules.html" class="menu-link">⚙️ Manage Modules</a>
         <a href="index.html" class="menu-link">⬅️ Back to Hub</a>
     </nav>
@@ -71,26 +60,6 @@
 
     <main class="main-content">
         
-        <div id="admin-live-monitor" class="live-panel">
-            <div class="live-header">
-                <div>
-                    <h2 style="color: #333; display: flex; align-items: center;"><span class="monitor-pulse"></span> Live Quiz Monitor</h2>
-                    <p style="color: #666; font-size: 0.9rem; margin-top: 5px;">Real-time cohort tracking. Only visible to Administrators.</p>
-                </div>
-            </div>
-            
-            <div style="display: flex; gap: 15px; margin-bottom: 25px;">
-                <select id="module-selector" onchange="changeActiveTargetModule()" style="flex-grow: 1; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 1rem;">
-                    <option value="">-- Select Active Quiz Target Module --</option>
-                </select>
-                <button onclick="clearLiveCache()" style="background: #dc3545; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s;">Reset Live Board</button>
-            </div>
-
-            <div id="live-render-zone">
-                <p style="text-align: center; color: #999; padding: 20px; font-style: italic;">Select an active quiz target module from the dropdown filter menu above to begin data visualization tracking.</p>
-            </div>
-        </div>
-
         <div class="header">
             <h1>Simulation Performance</h1>
             <p>Historical metrics compiled from all employee training modules.</p>
@@ -138,26 +107,13 @@
         const dbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0dGVibWdocXBhaGpjbHljeGF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NDE4NDIsImV4cCI6MjA5MzAxNzg0Mn0.bwsArSg1M4GO0mJV83jttCikkeoXj_HL_yEsRlxptzE'; 
         const db = window.supabase.createClient(dbUrl, dbKey);
 
-        // --- GLOBAL VARIABLES FOR LIVE MONITOR ---
-        let activeModuleName = "";
-        let loadedQuizSchema = null;
-        let localTallies = {}; 
-        let realtimeChannel = null;
-
         // --- AUTHENTICATION & INITIALIZATION ---
         let dashboardInitialized = false;
 
         async function initDashboard(session) {
             if (dashboardInitialized) return;
             dashboardInitialized = true;
-
             fetchAnalytics();
-
-            const { data: roleData } = await db.from('user_roles').select('role').eq('email', session.user.email).single();
-            if (roleData && roleData.role === 'admin') {
-                document.getElementById('admin-live-monitor').style.display = 'block';
-                fetchAvailableQuizzes();
-            }
         }
 
         // Primary: getSession() is reliable in Supabase v2.39+
@@ -173,118 +129,6 @@
                 initDashboard(session);
             }
         });
-
-        // ==========================================
-        // LIVE MONITOR LOGIC
-        // ==========================================
-        async function fetchAvailableQuizzes() {
-            const { data } = await db.from('module_content').select('module_name, scenario_data').eq('module_type', 'quiz');
-            const select = document.getElementById('module-selector');
-            if (data) {
-                data.forEach(m => {
-                    let opt = document.createElement('option');
-                    opt.value = m.module_name;
-                    opt.innerText = m.module_name;
-                    opt.dataset.schema = JSON.stringify(m.scenario_data);
-                    select.appendChild(opt);
-                });
-            }
-        }
-
-        async function changeActiveTargetModule() {
-            const select = document.getElementById('module-selector');
-            activeModuleName = select.value;
-            
-            if (!activeModuleName) {
-                document.getElementById('live-render-zone').innerHTML = '<p style="text-align:center;color:#999;">Select an active quiz target module to begin live tracking.</p>';
-                return;
-            }
-
-            const selectedOpt = select.options[select.selectedIndex];
-            loadedQuizSchema = JSON.parse(selectedOpt.dataset.schema);
-
-            localTallies = {};
-            loadedQuizSchema.questions.forEach((q, idx) => {
-                localTallies[idx] = { 0: 0, 1: 0, 2: 0, 3: 0, _total: 0 };
-            });
-
-            const { data } = await db.from('quiz_responses').select('*').eq('module_name', activeModuleName);
-            if (data) {
-                data.forEach(row => {
-                    if (localTallies[row.question_index]) {
-                        localTallies[row.question_index][row.selected_index]++;
-                        localTallies[row.question_index]._total++;
-                    }
-                });
-            }
-
-            renderMetricsUI();
-            listenToLiveTraffic();
-        }
-
-        function listenToLiveTraffic() {
-            if (realtimeChannel) db.removeChannel(realtimeChannel);
-
-            realtimeChannel = db.channel('live-quiz-feed')
-                .on('postgres_changes', { 
-                    event: 'INSERT', 
-                    schema: 'public', 
-                    table: 'quiz_responses',
-                    filter: `module_name=eq.${activeModuleName}`
-                }, payload => {
-                    const row = payload.new;
-                    if (localTallies[row.question_index]) {
-                        localTallies[row.question_index][row.selected_index]++;
-                        localTallies[row.question_index]._total++;
-                        renderMetricsUI(); 
-                    }
-                })
-                .subscribe();
-        }
-
-        function renderMetricsUI() {
-            const zone = document.getElementById('live-render-zone');
-            zone.innerHTML = '';
-
-            loadedQuizSchema.questions.forEach((q, qIdx) => {
-                const stats = localTallies[qIdx];
-                let questionHTML = `
-                    <div class="question-block">
-                        <h3 style="color:#333; font-size:1.1rem; margin-bottom: 5px;">Q${qIdx + 1}: ${q.question}</h3>
-                        <p style="font-size:0.85rem; color:#888; margin-bottom:15px;">Total responses: <strong>${stats._total}</strong></p>
-                `;
-
-                q.options.forEach((optText, oIdx) => {
-                    const count = stats[oIdx];
-                    const percentage = stats._total > 0 ? Math.round((count / stats._total) * 100) : 0;
-                    const isCorrect = oIdx === q.correctIndex;
-
-                    questionHTML += `
-                        <div class="option-row">
-                            <div class="option-meta">
-                                <span>${isCorrect ? '✅ ' : '❌ '}${optText}</span>
-                                <span><strong>${count} votes</strong> (${percentage}%)</span>
-                            </div>
-                            <div class="progress-track">
-                                <div class="progress-fill" style="width: ${percentage}%; background-color: ${isCorrect ? '#22c55e' : '#ef4444'};"></div>
-                            </div>
-                        </div>
-                    `;
-                });
-
-                questionHTML += `</div>`;
-                zone.insertAdjacentHTML('beforeend', questionHTML);
-            });
-        }
-
-        async function clearLiveCache() {
-            if (!activeModuleName) return;
-            const check = confirm("Permanently purge live polling metrics for this module? Historical results in the charts below will be untouched.");
-            if (check) {
-                await db.from('quiz_responses').delete().eq('module_name', activeModuleName);
-                changeActiveTargetModule(); // Refresh the UI
-            }
-        }
 
         // ==========================================
         // HISTORICAL CHARTS LOGIC

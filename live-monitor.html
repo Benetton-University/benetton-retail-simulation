@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benetton Training Hub - Live Monitor</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f5f5f5; color: #333; overflow-x: hidden; }
+
+        .floating-hamburger { position: fixed; top: 20px; left: 20px; font-size: 1.8rem; background: white; border: 2px solid #00563f; color: #00563f; border-radius: 8px; cursor: pointer; z-index: 990; padding: 5px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.2s; }
+        .floating-hamburger:hover { background: #00563f; color: white; }
+        .slide-menu { position: fixed; top: 0; left: -280px; width: 250px; height: 100vh; background-color: #00563f; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.2); transition: left 0.3s ease-in-out; z-index: 1000; }
+        .slide-menu.active { left: 0; }
+        .slide-menu h3 { color: white; margin: 50px 0 20px 10px; font-size: 1.2rem; }
+        .menu-link { display: block; color: white; text-decoration: none; padding: 15px 10px; font-size: 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.1); transition: 0.2s; }
+        .menu-link:hover { background-color: rgba(255,255,255,0.1); border-left: 4px solid #fff; }
+        .close-btn { position: absolute; top: 15px; right: 20px; background: none; border: none; color: white; font-size: 2rem; cursor: pointer; }
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 999; }
+        .overlay.active { display: block; }
+
+        .main-content { width: 100%; max-width: 1000px; margin: 0 auto; padding: 80px 30px 40px 30px; }
+
+        .page-header { margin-bottom: 30px; }
+        .page-header h1 { color: #333; font-size: 2rem; margin-bottom: 5px; display: flex; align-items: center; gap: 12px; }
+        .page-header p { color: #666; }
+
+        .monitor-pulse { display: inline-block; width: 12px; height: 12px; background-color: #22c55e; border-radius: 50%; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+
+        .controls-bar { display: flex; gap: 15px; margin-bottom: 25px; }
+        .controls-bar select { flex-grow: 1; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 1rem; background: white; }
+        .reset-btn { background: #dc3545; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; white-space: nowrap; }
+        .reset-btn:hover { background: #b02a37; }
+
+        .status-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; font-size: 0.85rem; color: #666; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; }
+        .status-dot.connected { background: #22c55e; }
+        .status-dot.error { background: #dc3545; }
+
+        .question-block { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #eaeaea; }
+        .option-row { margin-top: 12px; }
+        .option-meta { display: flex; justify-content: space-between; font-size: 0.95rem; margin-bottom: 6px; color: #555; }
+        .progress-track { background: #e2e8f0; height: 16px; border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        .empty-state { text-align: center; color: #999; padding: 60px 20px; font-style: italic; background: white; border-radius: 8px; border: 1px solid #eaeaea; }
+    </style>
+</head>
+<body>
+
+    <button id="menu-toggle" class="floating-hamburger">☰</button>
+
+    <nav id="sidebar" class="slide-menu">
+        <button id="close-menu" class="close-btn">&times;</button>
+        <h3>Benetton Training Hub</h3>
+        <a href="dashboard.html" class="menu-link">📊 Analytics Dashboard</a>
+        <a href="live-monitor.html" class="menu-link" style="background-color: rgba(255,255,255,0.1); border-left: 4px solid #fff;">📡 Live Monitor</a>
+        <a href="manage-modules.html" class="menu-link">⚙️ Manage Modules</a>
+        <a href="index.html" class="menu-link">⬅️ Back to Hub</a>
+    </nav>
+
+    <div id="sidebar-overlay" class="overlay"></div>
+
+    <main class="main-content">
+        <div class="page-header">
+            <h1><span class="monitor-pulse"></span> Live Quiz Monitor</h1>
+            <p>Real-time cohort response tracking. Admin access only.</p>
+        </div>
+
+        <div class="controls-bar">
+            <select id="module-selector" onchange="changeActiveModule()">
+                <option value="">-- Select a Quiz Module to Monitor --</option>
+            </select>
+            <button class="reset-btn" onclick="clearLiveCache()">Reset Live Board</button>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-dot" id="status-dot"></div>
+            <span id="status-text">Not connected</span>
+        </div>
+
+        <div id="live-render-zone">
+            <div class="empty-state">Select a quiz module from the dropdown above to begin live tracking.</div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const dbUrl = 'https://lttebmghqpahjclycxau.supabase.co';
+        const dbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0dGVibWdocXBhaGpjbHljeGF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NDE4NDIsImV4cCI6MjA5MzAxNzg0Mn0.bwsArSg1M4GO0mJV83jttCikkeoXj_HL_yEsRlxptzE';
+        const db = window.supabase.createClient(dbUrl, dbKey);
+
+        let activeModuleName = "";
+        let loadedQuizSchema = null;
+        let localTallies = {};
+        let realtimeChannel = null;
+
+        // --- AUTH: Admin only ---
+        let pageInitialized = false;
+        async function initPage(session) {
+            if (pageInitialized) return;
+            pageInitialized = true;
+
+            const { data: roleData } = await db.from('user_roles').select('role').eq('email', session.user.email).single();
+            if (!roleData || roleData.role !== 'admin') {
+                window.location.href = "index.html";
+                return;
+            }
+            fetchAvailableQuizzes();
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await db.auth.getSession();
+            if (session) { initPage(session); }
+        });
+
+        db.auth.onAuthStateChange(async (event, session) => {
+            if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+                if (!session) { window.location.href = "index.html"; return; }
+                initPage(session);
+            }
+        });
+
+        // --- QUIZ LIST ---
+        async function fetchAvailableQuizzes() {
+            const { data } = await db.from('module_content').select('module_name, scenario_data').eq('module_type', 'quiz');
+            const select = document.getElementById('module-selector');
+            if (data) {
+                data.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.module_name;
+                    opt.innerText = m.module_name;
+                    opt.dataset.schema = JSON.stringify(m.scenario_data);
+                    select.appendChild(opt);
+                });
+            }
+        }
+
+        // --- MODULE SELECTION ---
+        async function changeActiveModule() {
+            const select = document.getElementById('module-selector');
+            activeModuleName = select.value;
+
+            if (!activeModuleName) {
+                setStatus(false);
+                document.getElementById('live-render-zone').innerHTML = '<div class="empty-state">Select a quiz module from the dropdown above to begin live tracking.</div>';
+                return;
+            }
+
+            const selectedOpt = select.options[select.selectedIndex];
+            loadedQuizSchema = JSON.parse(selectedOpt.dataset.schema);
+
+            // Reset tallies
+            localTallies = {};
+            loadedQuizSchema.questions.forEach((q, idx) => {
+                localTallies[idx] = { _total: 0 };
+                q.options.forEach((_, oIdx) => { localTallies[idx][oIdx] = 0; });
+            });
+
+            // Load historical responses
+            const { data } = await db.from('quiz_responses').select('question_index, selected_index').eq('module_name', activeModuleName);
+            if (data) {
+                data.forEach(row => {
+                    const qIdx = parseInt(row.question_index);
+                    const sIdx = parseInt(row.selected_index);
+                    if (localTallies[qIdx] !== undefined) {
+                        localTallies[qIdx][sIdx] = (localTallies[qIdx][sIdx] || 0) + 1;
+                        localTallies[qIdx]._total++;
+                    }
+                });
+            }
+
+            renderUI();
+            subscribeToLive();
+        }
+
+        // --- REALTIME SUBSCRIPTION ---
+        function subscribeToLive() {
+            if (realtimeChannel) db.removeChannel(realtimeChannel);
+            setStatus(false, 'Connecting...');
+
+            realtimeChannel = db.channel('live-monitor-' + activeModuleName)
+                .on('postgres_changes', {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'quiz_responses'
+                }, payload => {
+                    const row = payload.new;
+                    // Client-side filter — more reliable than server-side filter
+                    if (row.module_name !== activeModuleName) return;
+
+                    const qIdx = parseInt(row.question_index);
+                    const sIdx = parseInt(row.selected_index);
+                    if (localTallies[qIdx] !== undefined) {
+                        localTallies[qIdx][sIdx] = (localTallies[qIdx][sIdx] || 0) + 1;
+                        localTallies[qIdx]._total++;
+                        renderUI();
+                    }
+                })
+                .subscribe((status) => {
+                    if (status === 'SUBSCRIBED') {
+                        setStatus(true, 'Live — receiving responses');
+                    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                        setStatus(false, 'Connection error — try reselecting the module');
+                    }
+                });
+        }
+
+        function setStatus(connected, text) {
+            const dot = document.getElementById('status-dot');
+            const label = document.getElementById('status-text');
+            dot.className = 'status-dot' + (connected ? ' connected' : '');
+            label.textContent = text || (connected ? 'Live' : 'Not connected');
+        }
+
+        // --- RENDER ---
+        function renderUI() {
+            const zone = document.getElementById('live-render-zone');
+            zone.innerHTML = '';
+
+            loadedQuizSchema.questions.forEach((q, qIdx) => {
+                const stats = localTallies[qIdx];
+                let html = `
+                    <div class="question-block">
+                        <h3 style="color:#333; font-size:1.05rem; margin-bottom:5px;">Q${qIdx + 1}: ${q.question}</h3>
+                        <p style="font-size:0.82rem; color:#888; margin-bottom:12px;">Total responses: <strong>${stats._total}</strong></p>
+                `;
+
+                q.options.forEach((optText, oIdx) => {
+                    const count = stats[oIdx] || 0;
+                    const pct = stats._total > 0 ? Math.round((count / stats._total) * 100) : 0;
+                    const isCorrect = oIdx === q.correctIndex;
+                    const barColor = isCorrect ? '#22c55e' : '#ef4444';
+
+                    html += `
+                        <div class="option-row">
+                            <div class="option-meta">
+                                <span>${isCorrect ? '✅' : '❌'} ${optText}</span>
+                                <span><strong>${count} votes</strong> (${pct}%)</span>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-fill" style="width:${pct}%; background:${barColor};"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+                zone.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        // --- RESET ---
+        async function clearLiveCache() {
+            if (!activeModuleName) return;
+            if (!confirm(`Permanently delete all live responses for "${activeModuleName}"? Historical training logs are unaffected.`)) return;
+            await db.from('quiz_responses').delete().eq('module_name', activeModuleName);
+            changeActiveModule();
+        }
+
+        // --- SIDEBAR ---
+        const menuToggle = document.getElementById('menu-toggle');
+        const closeMenu = document.getElementById('close-menu');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        function toggleSidebar() { sidebar.classList.toggle('active'); overlay.classList.toggle('active'); }
+        menuToggle.addEventListener('click', toggleSidebar);
+        closeMenu.addEventListener('click', toggleSidebar);
+        overlay.addEventListener('click', toggleSidebar);
+    </script>
+</body>
+</html>
