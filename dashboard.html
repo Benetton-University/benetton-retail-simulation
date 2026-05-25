@@ -146,25 +146,31 @@
 
         // --- AUTHENTICATION & INITIALIZATION ---
         let dashboardInitialized = false;
-        supabase.auth.onAuthStateChange(async (event, session) => {
+
+        async function initDashboard(session) {
             if (dashboardInitialized) return;
+            dashboardInitialized = true;
+
+            fetchAnalytics();
+
+            const { data: roleData } = await supabase.from('user_roles').select('role').eq('email', session.user.email).single();
+            if (roleData && roleData.role === 'admin') {
+                document.getElementById('admin-live-monitor').style.display = 'block';
+                fetchAvailableQuizzes();
+            }
+        }
+
+        // Primary: getSession() is reliable in Supabase v2.39+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) { initDashboard(session); }
+        });
+
+        // Fallback: onAuthStateChange handles INITIAL_SESSION and the redirect on no-session
+        supabase.auth.onAuthStateChange(async (event, session) => {
             if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
-                dashboardInitialized = true;
-                if (!session) {
-                    window.location.href = "index.html";
-                    return;
-                }
-
-                // Role Check: Reveal Live Monitor ONLY if Admin
-                const email = session.user.email;
-                const { data: roleData } = await supabase.from('user_roles').select('role').eq('email', email).single();
-
-                if (roleData && roleData.role === 'admin') {
-                    document.getElementById('admin-live-monitor').style.display = 'block';
-                    fetchAvailableQuizzes();
-                }
-
-                fetchAnalytics();
+                if (!session) { window.location.href = "index.html"; return; }
+                initDashboard(session);
             }
         });
 
