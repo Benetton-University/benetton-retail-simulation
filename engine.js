@@ -139,7 +139,7 @@ function handleQuizAnswer(selectedIndex, qData, clickedBtn) {
     const isCorrect = (selectedIndex === qData.correctIndex);
     let ptsEarned = 0;
 
-    // --- NEW: LIVE BROADCAST TO INSTRUCTOR MONITOR ---
+    // --- LIVE BROADCAST TO INSTRUCTOR MONITOR ---
     sbClient
         .from('quiz_responses')
         .insert([{
@@ -147,10 +147,12 @@ function handleQuizAnswer(selectedIndex, qData, clickedBtn) {
             question_index: quizState.currentIndex,
             selected_index: selectedIndex
         }])
-        .then(({ error }) => { 
-            if (error) console.error("Realtime broadcast dropped:", error); 
+        .then(({ error }) => {
+            if (error) {
+                console.error("quiz_responses insert failed — check Supabase RLS policies:", error.message);
+            }
         });
-    // ------------------------------------------------
+    // ---------------------------------------------
 
     if (isCorrect) {
         quizState.streak++;
