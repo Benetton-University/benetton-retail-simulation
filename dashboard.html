@@ -136,7 +136,7 @@
     <script>
         const dbUrl = 'https://lttebmghqpahjclycxau.supabase.co'; 
         const dbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0dGVibWdocXBhaGpjbHljeGF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NDE4NDIsImV4cCI6MjA5MzAxNzg0Mn0.bwsArSg1M4GO0mJV83jttCikkeoXj_HL_yEsRlxptzE'; 
-        const supabase = window.supabase.createClient(dbUrl, dbKey);
+        const db = window.supabase.createClient(dbUrl, dbKey);
 
         // --- GLOBAL VARIABLES FOR LIVE MONITOR ---
         let activeModuleName = "";
@@ -153,7 +153,7 @@
 
             fetchAnalytics();
 
-            const { data: roleData } = await supabase.from('user_roles').select('role').eq('email', session.user.email).single();
+            const { data: roleData } = await db.from('user_roles').select('role').eq('email', session.user.email).single();
             if (roleData && roleData.role === 'admin') {
                 document.getElementById('admin-live-monitor').style.display = 'block';
                 fetchAvailableQuizzes();
@@ -162,12 +162,12 @@
 
         // Primary: getSession() is reliable in Supabase v2.39+
         document.addEventListener('DOMContentLoaded', async () => {
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await db.auth.getSession();
             if (session) { initDashboard(session); }
         });
 
         // Fallback: onAuthStateChange handles INITIAL_SESSION and the redirect on no-session
-        supabase.auth.onAuthStateChange(async (event, session) => {
+        db.auth.onAuthStateChange(async (event, session) => {
             if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
                 if (!session) { window.location.href = "index.html"; return; }
                 initDashboard(session);
@@ -178,7 +178,7 @@
         // LIVE MONITOR LOGIC
         // ==========================================
         async function fetchAvailableQuizzes() {
-            const { data } = await supabase.from('module_content').select('module_name, scenario_data').eq('module_type', 'quiz');
+            const { data } = await db.from('module_content').select('module_name, scenario_data').eq('module_type', 'quiz');
             const select = document.getElementById('module-selector');
             if (data) {
                 data.forEach(m => {
@@ -208,7 +208,7 @@
                 localTallies[idx] = { 0: 0, 1: 0, 2: 0, 3: 0, _total: 0 };
             });
 
-            const { data } = await supabase.from('quiz_responses').select('*').eq('module_name', activeModuleName);
+            const { data } = await db.from('quiz_responses').select('*').eq('module_name', activeModuleName);
             if (data) {
                 data.forEach(row => {
                     if (localTallies[row.question_index]) {
@@ -223,9 +223,9 @@
         }
 
         function listenToLiveTraffic() {
-            if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+            if (realtimeChannel) db.removeChannel(realtimeChannel);
 
-            realtimeChannel = supabase.channel('live-quiz-feed')
+            realtimeChannel = db.channel('live-quiz-feed')
                 .on('postgres_changes', { 
                     event: 'INSERT', 
                     schema: 'public', 
@@ -281,7 +281,7 @@
             if (!activeModuleName) return;
             const check = confirm("Permanently purge live polling metrics for this module? Historical results in the charts below will be untouched.");
             if (check) {
-                await supabase.from('quiz_responses').delete().eq('module_name', activeModuleName);
+                await db.from('quiz_responses').delete().eq('module_name', activeModuleName);
                 changeActiveTargetModule(); // Refresh the UI
             }
         }
@@ -291,7 +291,7 @@
         // ==========================================
         async function fetchAnalytics() {
             try {
-                const { data, error } = await supabase.from('training_logs').select('*');
+                const { data, error } = await db.from('training_logs').select('*');
                 if (error) throw error;
                 if (!data || data.length === 0) {
                     document.getElementById('risk-module').innerText = "No Data Yet";
