@@ -254,7 +254,6 @@
         // --- RESET ---
         async function clearLiveCache() {
             if (!activeModuleName) return;
-            if (!confirm(`Permanently delete all live responses for "${activeModuleName}"? Historical training logs are unaffected.`)) return;
             await db.from('quiz_responses').delete().eq('module_name', activeModuleName);
             changeActiveModule();
         }
