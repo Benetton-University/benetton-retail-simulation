@@ -109,7 +109,7 @@
 
         <div class="charts-container">
             <div class="chart-box">
-                <h3>Average Policy Errors by Module</h3>
+                <h3>Average Errors by Module</h3>
                 <div class="canvas-container">
                     <canvas id="errorsChart"></canvas>
                 </div>
@@ -125,7 +125,7 @@
         <div class="section-header">
             <div>
                 <h2>Employee Performance</h2>
-                <p>Completions and average policy errors per staff member</p>
+                <p>Completions and average errors per staff member</p>
             </div>
             <div class="sort-controls">
                 <button class="sort-btn active" id="sort-name" onclick="sortEmployeeTable('name')">Name</button>
@@ -139,7 +139,7 @@
                     <tr>
                         <th>Employee</th>
                         <th>Completions</th>
-                        <th>Avg Policy Errors</th>
+                        <th>Avg Errors</th>
                         <th>Avg Customer Mood</th>
                     </tr>
                 </thead>
@@ -189,7 +189,6 @@
 
         async function fetchAnalytics() {
             try {
-                // Fetch training logs
                 const { data, error } = await db.from('training_logs').select('*');
                 if (error) throw error;
 
@@ -202,45 +201,61 @@
 
                 document.getElementById('total-sims').innerText = data.length;
 
+                // Identify simulation modules (the only type that tracks customer mood)
+                const simModules = new Set();
+                try {
+                    const { data: mods } = await db.from('module_content').select('module_name, module_type');
+                    if (mods) {
+                        mods.forEach(m => {
+                            if (!m.module_type || m.module_type === 'simulation') simModules.add(m.module_name);
+                        });
+                    }
+                } catch (e) {}
+
                 let moduleStats = {};
                 let userStats = {};
 
                 data.forEach(log => {
-                    let mod = log.module_name || "Unknown Module";
-                    if (!moduleStats[mod]) { moduleStats[mod] = { runs: 0, totalMood: 0, totalMistakes: 0 }; }
+                    const mod = log.module_name || "Unknown Module";
+                    const isSim = simModules.size === 0 || simModules.has(mod);
+
+                    if (!moduleStats[mod]) { moduleStats[mod] = { runs: 0, totalMistakes: 0, totalMood: 0, moodRuns: 0 }; }
                     moduleStats[mod].runs += 1;
-                    moduleStats[mod].totalMood += parseInt(log.final_mood_score) || 0;
                     moduleStats[mod].totalMistakes += parseInt(log.mistakes) || 0;
+                    if (isSim) { moduleStats[mod].totalMood += parseInt(log.final_mood_score) || 0; moduleStats[mod].moodRuns += 1; }
 
                     const emailKey = (log.email || 'unknown').toLowerCase();
-                    if (!userStats[emailKey]) {
-                        userStats[emailKey] = { completions: 0, totalMistakes: 0, totalMood: 0 };
-                    }
+                    if (!userStats[emailKey]) { userStats[emailKey] = { completions: 0, totalMistakes: 0, totalMood: 0, moodRuns: 0 }; }
                     userStats[emailKey].completions += 1;
                     userStats[emailKey].totalMistakes += parseInt(log.mistakes) || 0;
-                    userStats[emailKey].totalMood += parseInt(log.final_mood_score) || 0;
+                    if (isSim) { userStats[emailKey].totalMood += parseInt(log.final_mood_score) || 0; userStats[emailKey].moodRuns += 1; }
                 });
 
-                let labels = [], avgMistakesData = [], avgMoodData = [];
+                let errorLabels = [], avgMistakesData = [];
+                let moodLabels = [], avgMoodData = [];
                 let highestRiskModule = "None", maxAvgMistakes = -1;
                 let lowestMoodModule = "None", minAvgMood = 101;
 
                 for (const [moduleName, stats] of Object.entries(moduleStats)) {
-                    let avgMistakes = parseFloat((stats.totalMistakes / stats.runs).toFixed(1));
-                    let avgMood = Math.round(stats.totalMood / stats.runs);
-                    labels.push(moduleName);
+                    const avgMistakes = parseFloat((stats.totalMistakes / stats.runs).toFixed(1));
+                    errorLabels.push(moduleName);
                     avgMistakesData.push(avgMistakes);
-                    avgMoodData.push(avgMood);
                     if (avgMistakes > maxAvgMistakes) { maxAvgMistakes = avgMistakes; highestRiskModule = moduleName; }
-                    if (avgMood < minAvgMood) { minAvgMood = avgMood; lowestMoodModule = moduleName; }
+
+                    if (stats.moodRuns > 0) {
+                        const avgMood = Math.round(stats.totalMood / stats.moodRuns);
+                        moodLabels.push(moduleName);
+                        avgMoodData.push(avgMood);
+                        if (avgMood < minAvgMood) { minAvgMood = avgMood; lowestMoodModule = moduleName; }
+                    }
                 }
 
                 document.getElementById('risk-module').innerText = highestRiskModule;
                 document.getElementById('risk-stat').innerText = `${maxAvgMistakes} errors per run`;
-                document.getElementById('mood-module').innerText = lowestMoodModule;
-                document.getElementById('mood-stat').innerText = `${minAvgMood}% avg mood score`;
+                document.getElementById('mood-module').innerText = lowestMoodModule !== "None" ? lowestMoodModule : "No Data";
+                document.getElementById('mood-stat').innerText = lowestMoodModule !== "None" ? `${minAvgMood}% avg mood score` : "";
 
-                drawCharts(labels, avgMistakesData, avgMoodData);
+                drawCharts(errorLabels, avgMistakesData, moodLabels, avgMoodData);
 
                 // Build name map from static CSV (avoids Supabase RLS row restrictions)
                 const nameMap = {};
@@ -257,7 +272,7 @@
                     email,
                     completions: s.completions,
                     avgErrors: parseFloat((s.totalMistakes / s.completions).toFixed(1)),
-                    avgMood: Math.round(s.totalMood / s.completions)
+                    avgMood: s.moodRuns > 0 ? Math.round(s.totalMood / s.moodRuns) : null
                 }));
 
                 renderEmployeeTable();
@@ -297,8 +312,9 @@
             tbody.innerHTML = sorted.map(row => {
                 const errPct = Math.round((row.avgErrors / maxErrors) * 100);
                 const errColor = row.avgErrors === 0 ? '#22c55e' : row.avgErrors <= 1 ? '#f59e0b' : '#ef4444';
-                const moodColor = row.avgMood >= 70 ? '#22c55e' : row.avgMood >= 40 ? '#f59e0b' : '#ef4444';
-                const moodClass = row.avgMood >= 70 ? 'pill-green' : row.avgMood >= 40 ? 'pill-yellow' : 'pill-red';
+                const moodCell = row.avgMood !== null
+                    ? (() => { const c = row.avgMood >= 70 ? 'pill-green' : row.avgMood >= 40 ? 'pill-yellow' : 'pill-red'; return `<span class="pill ${c}">${row.avgMood}%</span>`; })()
+                    : '<span style="color:#bbb;font-size:0.85rem;">N/A</span>';
                 return `
                     <tr>
                         <td><strong>${row.name}</strong><br><span style="font-size:0.78rem;color:#aaa;">${row.email}</span></td>
@@ -307,20 +323,20 @@
                             <strong style="color:${errColor};">${row.avgErrors}</strong>
                             <span class="mini-bar-track"><span class="mini-bar-fill" style="width:${errPct}%;background:${errColor};"></span></span>
                         </td>
-                        <td><span class="pill ${moodClass}">${row.avgMood}%</span></td>
+                        <td>${moodCell}</td>
                     </tr>`;
             }).join('');
         }
 
-        function drawCharts(labels, errorsData, moodData) {
+        function drawCharts(errorLabels, errorsData, moodLabels, moodData) {
             new Chart(document.getElementById('errorsChart'), {
                 type: 'bar',
-                data: { labels: labels, datasets: [{ label: 'Avg Policy Errors', data: errorsData, backgroundColor: '#e53935', borderRadius: 4 }] },
+                data: { labels: errorLabels, datasets: [{ label: 'Avg Errors', data: errorsData, backgroundColor: '#e53935', borderRadius: 4 }] },
                 options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
             });
             new Chart(document.getElementById('moodChart'), {
                 type: 'bar',
-                data: { labels: labels, datasets: [{ label: 'Avg Customer Mood (%)', data: moodData, backgroundColor: '#ffc107', borderRadius: 4 }] },
+                data: { labels: moodLabels, datasets: [{ label: 'Avg Customer Mood (%)', data: moodData, backgroundColor: '#ffc107', borderRadius: 4 }] },
                 options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } }
             });
         }
