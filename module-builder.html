@@ -48,6 +48,13 @@
         .submit-btn:hover { background-color: #003d2c; }
         
         #status-message { margin-top: 15px; font-weight: bold; text-align: center; display: none; padding: 10px; border-radius: 4px; }
+
+        .scenario-tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid #dee2e6; padding-bottom: 0; }
+        .scenario-tab { background: #f8f9fa; border: 1px solid #dee2e6; border-bottom: none; padding: 10px 22px; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: bold; color: #666; font-size: 0.95rem; transition: 0.15s; margin-bottom: -2px; }
+        .scenario-tab:hover { background: #e9ecef; }
+        .scenario-tab.active { background: white; border-color: #17a2b8; border-bottom-color: white; color: #17a2b8; }
+        .scenario-panel { display: none; }
+        .scenario-panel.active { display: block; }
     </style>
 </head>
 <body>
@@ -85,16 +92,30 @@
 
         <div class="form-card" style="border-top-color: #17a2b8;">
             <h2 style="margin-bottom: 20px; color: #333;">Scenario Dialogue Builder</h2>
-            <p style="color: #666; margin-bottom: 20px; font-size: 0.9rem;">The first step must always have the ID <strong>start</strong>.</p>
+            <p style="color: #666; margin-bottom: 20px; font-size: 0.9rem;">Build 3 independent scenarios — each employee is randomly assigned one. Every scenario must have a step with the ID <strong>start</strong>.</p>
             <div class="form-group">
                 <label>Character Name <span style="color:#666; font-weight:normal;">(shown in chat and mood bar — e.g., "Customer", "Floor Manager")</span></label>
                 <input type="text" id="character-name" placeholder="e.g., Customer" value="Customer">
             </div>
             
-            <div id="steps-container">
-                </div>
+            <div class="scenario-tabs">
+                <button class="scenario-tab active" onclick="showScenario(1)">Scenario 1</button>
+                <button class="scenario-tab" onclick="showScenario(2)">Scenario 2</button>
+                <button class="scenario-tab" onclick="showScenario(3)">Scenario 3</button>
+            </div>
 
-            <button class="add-btn" onclick="addStep()">➕ Add New Step</button>
+            <div id="scenario-panel-1" class="scenario-panel active">
+                <div id="steps-container-1"></div>
+                <button class="add-btn" onclick="addStep(false, null, null, 1)">➕ Add New Step</button>
+            </div>
+            <div id="scenario-panel-2" class="scenario-panel">
+                <div id="steps-container-2"></div>
+                <button class="add-btn" onclick="addStep(false, null, null, 2)">➕ Add New Step</button>
+            </div>
+            <div id="scenario-panel-3" class="scenario-panel">
+                <div id="steps-container-3"></div>
+                <button class="add-btn" onclick="addStep(false, null, null, 3)">➕ Add New Step</button>
+            </div>
         </div>
 
         <button class="submit-btn" onclick="publishModule()">Publish Module to Cloud</button>
@@ -114,7 +135,12 @@
         let editingModuleId = null;
 
         // --- 2. DYNAMIC UI FUNCTIONS ---
-        function addStep(isStart = false, stepIdOverride = null, prefillData = null) {
+        function showScenario(n) {
+            document.querySelectorAll('.scenario-tab').forEach((tab, i) => tab.classList.toggle('active', i + 1 === n));
+            document.querySelectorAll('.scenario-panel').forEach((panel, i) => panel.classList.toggle('active', i + 1 === n));
+        }
+
+        function addStep(isStart = false, stepIdOverride = null, prefillData = null, scenarioIndex = 1) {
             stepCount++;
             const stepIdVal = stepIdOverride || (isStart ? 'start' : `step_${stepCount}`);
             
@@ -137,7 +163,7 @@
                     <button class="add-btn" onclick="addOption(this)">↳ Add Employee Option</button>
                 </div>
             `;
-            document.getElementById('steps-container').insertAdjacentHTML('beforeend', stepHtml);
+            document.getElementById(`steps-container-${scenarioIndex}`).insertAdjacentHTML('beforeend', stepHtml);
 
             if (prefillData) {
                 const stepCard = document.getElementById(`step-node-${stepCount}`);
@@ -214,14 +240,22 @@
             document.getElementById('module-description').value = data.description || '';
             document.getElementById('module-tags').value = data.tags || '';
 
-            const scenario = data.scenario_data || {};
-            document.getElementById('character-name').value = scenario._characterName || 'Customer';
+            const raw = data.scenario_data || {};
+            document.getElementById('character-name').value = raw._characterName || 'Customer';
 
-            const stepKeys = Object.keys(scenario).filter(k => k !== '_characterName');
-            const orderedKeys = ['start', ...stepKeys.filter(k => k !== 'start')];
-            orderedKeys.forEach(key => {
-                if (scenario[key]) addStep(key === 'start', key, scenario[key]);
-            });
+            if (raw.scenarios && Array.isArray(raw.scenarios)) {
+                // New multi-scenario format
+                raw.scenarios.forEach((sc, i) => {
+                    const idx = i + 1;
+                    const orderedKeys = ['start', ...Object.keys(sc).filter(k => k !== 'start')];
+                    orderedKeys.forEach(key => { if (sc[key]) addStep(key === 'start', key, sc[key], idx); });
+                });
+            } else {
+                // Legacy single-scenario — load into Scenario 1
+                const keys = Object.keys(raw).filter(k => k !== '_characterName');
+                const orderedKeys = ['start', ...keys.filter(k => k !== 'start')];
+                orderedKeys.forEach(key => { if (raw[key]) addStep(key === 'start', key, raw[key], 1); });
+            }
         }
 
         // Initialize the first required 'start' step when page loads
@@ -231,7 +265,9 @@
             if (editId) {
                 await loadModuleForEdit(editId);
             } else {
-                addStep(true);
+                addStep(true, 'start', null, 1);
+                addStep(true, 'start', null, 2);
+                addStep(true, 'start', null, 3);
             }
         };
 
@@ -251,39 +287,42 @@
                 return;
             }
 
-            // The Magic: Compile the UI inputs into pure JSON
+            // Compile each scenario tab into its own object
             const characterName = document.getElementById('character-name').value.trim() || 'Customer';
-            let scenarioJson = { _characterName: characterName };
-            const steps = document.querySelectorAll('.step-card');
-            
-            steps.forEach(step => {
-                const stepId = step.querySelector('.step-id').value.trim();
-                const customerText = step.querySelector('.customer-text').value.trim();
-                let optionsArray = [];
+            const scenarios = [];
 
-                step.querySelectorAll('.option-card').forEach(opt => {
-                    optionsArray.push({
-                        text: opt.querySelector('.opt-text').value.trim(),
-                        nextStep: opt.querySelector('.opt-next').value.trim() || 'endModule',
-                        isOptimal: opt.querySelector('.opt-optimal').checked,
-                        moodChange: parseInt(opt.querySelector('.opt-mood').value) || 0,
-                        feedback: opt.querySelector('.opt-feedback').value.trim()
+            for (let i = 1; i <= 3; i++) {
+                let scenarioObj = {};
+                document.querySelectorAll(`#steps-container-${i} .step-card`).forEach(step => {
+                    const stepId = step.querySelector('.step-id').value.trim();
+                    const customerText = step.querySelector('.customer-text').value.trim();
+                    let optionsArray = [];
+                    step.querySelectorAll('.option-card').forEach(opt => {
+                        optionsArray.push({
+                            text: opt.querySelector('.opt-text').value.trim(),
+                            nextStep: opt.querySelector('.opt-next').value.trim() || 'endModule',
+                            isOptimal: opt.querySelector('.opt-optimal').checked,
+                            moodChange: parseInt(opt.querySelector('.opt-mood').value) || 0,
+                            feedback: opt.querySelector('.opt-feedback').value.trim()
+                        });
                     });
+                    if (stepId && customerText) {
+                        scenarioObj[stepId] = { customerText, options: optionsArray };
+                    }
                 });
-
-                if (stepId && customerText) {
-                    scenarioJson[stepId] = {
-                        customerText: customerText,
-                        options: optionsArray
-                    };
-                }
-            });
-
-            // Ensure the 'start' node exists
-            if (!scenarioJson['start']) {
-                statusBox.innerText = '❌ A step with the ID "start" is required.';
-                return;
+                scenarios.push(scenarioObj);
             }
+
+            // Validate every scenario has a 'start' node
+            for (let i = 0; i < scenarios.length; i++) {
+                if (!scenarios[i]['start']) {
+                    statusBox.innerText = `❌ Scenario ${i + 1} is missing a step with the ID "start".`;
+                    showScenario(i + 1);
+                    return;
+                }
+            }
+
+            const scenarioJson = { _characterName: characterName, scenarios };
 
             statusBox.style.backgroundColor = '#cce5ff';
             statusBox.style.color = '#004085';

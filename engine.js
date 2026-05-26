@@ -66,6 +66,10 @@ async function fetchModuleFromCloud() {
         if (data && data.length > 0) {
             scenarioData = data[0].scenario_data;
             characterName = scenarioData._characterName || 'Customer';
+            if (scenarioData.scenarios && Array.isArray(scenarioData.scenarios) && scenarioData.scenarios.length > 0) {
+                const randomIndex = Math.floor(Math.random() * scenarioData.scenarios.length);
+                scenarioData = scenarioData.scenarios[randomIndex];
+            }
             const moduleType = data[0].module_type || 'scenario'; // Default to scenario if missing
 
             chatWindow.innerHTML = ''; 
