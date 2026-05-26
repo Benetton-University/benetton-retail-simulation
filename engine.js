@@ -638,16 +638,31 @@ function loadPriorityQuestion() {
     const total = scenarioData.questions.length;
     const n = q.options.length;
 
+    const situationCard = q.imageUrl ? `
+        <div style="position:relative; border-radius:12px; overflow:hidden; margin-bottom:20px; min-height:260px;
+                    background-image:url('${q.imageUrl}'); background-size:cover; background-position:center;">
+            <div style="position:absolute; inset:0; background:linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.72) 100%);"></div>
+            <div style="position:absolute; bottom:0; left:0; right:0; padding:24px 20px;">
+                <h3 style="color:#fff; margin-bottom:8px; font-size:1.3rem; text-shadow:0 1px 4px rgba(0,0,0,0.6);">${q.title}</h3>
+                <p style="color:rgba(255,255,255,0.92); font-size:0.95rem; line-height:1.6; text-shadow:0 1px 3px rgba(0,0,0,0.5);">
+                    <strong style="color:#fff;">Situation:</strong> ${q.situation}
+                </p>
+            </div>
+        </div>
+    ` : `
+        <h3 style="color:#6f42c1; margin-bottom:12px; font-size:1.25rem;">${q.title}</h3>
+        <div style="background:#f8f9fa; border-left:4px solid #6f42c1; padding:15px; border-radius:6px; margin-bottom:20px; line-height:1.6; color:#444;">
+            <strong>Situation:</strong> ${q.situation}
+        </div>
+    `;
+
     chatWindow.innerHTML = `
         <div style="padding: 10px; animation: slideIn 0.2s ease-out;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding:12px 16px; background:#f8f9fa; border-radius:10px; font-weight:bold; color:#555; font-size:0.95rem;">
                 <span>🧭 PRIORITY SURVEY</span>
                 <span>Situation ${priorityState.currentIndex + 1} / ${total}</span>
             </div>
-            <h3 style="color:#6f42c1; margin-bottom:12px; font-size:1.25rem;">${q.title}</h3>
-            <div style="background:#f8f9fa; border-left:4px solid #6f42c1; padding:15px; border-radius:6px; margin-bottom:20px; line-height:1.6; color:#444;">
-                <strong>Situation:</strong> ${q.situation}
-            </div>
+            ${situationCard}
             <p style="color:#666; font-size:0.9rem; margin-bottom:15px;">Rank each action from <strong>1 (Highest Priority)</strong> to <strong>${n} (Lowest Priority)</strong>. Each number can only be used once.</p>
         </div>
     `;

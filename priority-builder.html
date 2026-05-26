@@ -113,6 +113,15 @@
                         <label>Situation Description</label>
                         <textarea class="form-control q-situation" rows="3" placeholder="Describe the scenario the employee must respond to..."></textarea>
                     </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label>Background Image <span style="font-weight:normal; color:#888;">(optional — shown behind the situation text)</span></label>
+                        <input type="file" accept="image/*" class="q-image-file" style="display:block; margin-bottom:8px;" onchange="previewImage(this, ${qId})">
+                        <input type="text" class="form-control q-image-url" placeholder="Or paste an image URL (https://...)">
+                        <div id="img-preview-${qId}" style="margin-top:10px; display:none;">
+                            <img id="img-preview-el-${qId}" src="" alt="preview" style="max-width:100%; max-height:180px; border-radius:8px; object-fit:cover; border:1px solid #ddd;">
+                            <button type="button" onclick="clearImage(${qId})" style="display:block; margin-top:6px; background:none; border:none; color:#dc3545; cursor:pointer; font-size:0.85rem; font-weight:bold;">✕ Remove image</button>
+                        </div>
+                    </div>
                     <div class="form-group" style="margin-bottom: 8px;">
                         <label>Actions to Rank</label>
                         <p style="font-size:0.82rem; color:#888; margin-bottom:10px; font-weight:normal;">Employees will rank these from 1 (highest priority) to N (lowest). No right or wrong answer.</p>
@@ -126,10 +135,45 @@
             if (prefillData) {
                 document.querySelector(`#q-card-${qId} .q-title`).value = prefillData.title || '';
                 document.querySelector(`#q-card-${qId} .q-situation`).value = prefillData.situation || '';
+                if (prefillData.imageUrl) {
+                    document.querySelector(`#q-card-${qId} .q-image-url`).value = prefillData.imageUrl;
+                    showImagePreview(qId, prefillData.imageUrl);
+                }
                 (prefillData.options || []).forEach(opt => addOption(qId, opt));
             } else {
                 addOption(qId); addOption(qId); addOption(qId);
             }
+        }
+
+        function previewImage(input, qId) {
+            if (!input.files || !input.files[0]) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                document.querySelector(`#q-card-${qId} .q-image-url`).value = '';
+                showImagePreview(qId, e.target.result);
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+
+        function showImagePreview(qId, src) {
+            const preview = document.getElementById(`img-preview-${qId}`);
+            document.getElementById(`img-preview-el-${qId}`).src = src;
+            preview.style.display = 'block';
+        }
+
+        function clearImage(qId) {
+            document.querySelector(`#q-card-${qId} .q-image-file`).value = '';
+            document.querySelector(`#q-card-${qId} .q-image-url`).value = '';
+            document.getElementById(`img-preview-${qId}`).style.display = 'none';
+            document.getElementById(`img-preview-el-${qId}`).src = '';
+        }
+
+        function getImageForCard(qId) {
+            const urlInput = document.querySelector(`#q-card-${qId} .q-image-url`).value.trim();
+            if (urlInput) return urlInput;
+            const previewSrc = document.getElementById(`img-preview-el-${qId}`).src;
+            if (previewSrc && previewSrc !== window.location.href) return previewSrc;
+            return '';
         }
 
         function addOption(qId, value = '') {
@@ -182,12 +226,16 @@
             const surveyData = { questions: [] };
             let valid = true;
 
-            cards.forEach(card => {
+            cards.forEach((card, i) => {
+                const qId = card.id.replace('q-card-', '');
                 const t = card.querySelector('.q-title').value.trim();
                 const s = card.querySelector('.q-situation').value.trim();
-                const opts = Array.from(card.querySelectorAll('.option-row input[type="text"]')).map(i => i.value.trim());
+                const opts = Array.from(card.querySelectorAll('.option-row input[type="text"]')).map(inp => inp.value.trim());
+                const imageUrl = getImageForCard(qId);
                 if (!t || !s || opts.length < 2 || opts.some(o => !o)) valid = false;
-                surveyData.questions.push({ title: t, situation: s, options: opts });
+                const q = { title: t, situation: s, options: opts };
+                if (imageUrl) q.imageUrl = imageUrl;
+                surveyData.questions.push(q);
             });
 
             if (!valid) return alert('Please complete all fields. Each situation needs a title, description, and at least 2 actions.');
