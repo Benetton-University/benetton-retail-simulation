@@ -189,21 +189,9 @@
 
         async function fetchAnalytics() {
             try {
-                const [logsResult, rolesResult] = await Promise.all([
-                    db.from('training_logs').select('*'),
-                    db.from('user_roles').select('email, Name, name')
-                ]);
-
-                const { data, error } = logsResult;
+                // Fetch training logs
+                const { data, error } = await db.from('training_logs').select('*');
                 if (error) throw error;
-
-                // Build email→name lookup
-                const nameMap = {};
-                if (rolesResult.data) {
-                    rolesResult.data.forEach(r => {
-                        if (r.email) nameMap[r.email.toLowerCase()] = r.Name || r.name || null;
-                    });
-                }
 
                 if (!data || data.length === 0) {
                     document.getElementById('risk-module').innerText = "No Data Yet";
@@ -218,14 +206,12 @@
                 let userStats = {};
 
                 data.forEach(log => {
-                    // Module aggregation
                     let mod = log.module_name || "Unknown Module";
                     if (!moduleStats[mod]) { moduleStats[mod] = { runs: 0, totalMood: 0, totalMistakes: 0 }; }
                     moduleStats[mod].runs += 1;
                     moduleStats[mod].totalMood += parseInt(log.final_mood_score) || 0;
                     moduleStats[mod].totalMistakes += parseInt(log.mistakes) || 0;
 
-                    // User aggregation
                     const emailKey = (log.email || 'unknown').toLowerCase();
                     if (!userStats[emailKey]) {
                         userStats[emailKey] = { completions: 0, totalMistakes: 0, totalMood: 0 };
@@ -242,11 +228,9 @@
                 for (const [moduleName, stats] of Object.entries(moduleStats)) {
                     let avgMistakes = parseFloat((stats.totalMistakes / stats.runs).toFixed(1));
                     let avgMood = Math.round(stats.totalMood / stats.runs);
-
                     labels.push(moduleName);
                     avgMistakesData.push(avgMistakes);
                     avgMoodData.push(avgMood);
-
                     if (avgMistakes > maxAvgMistakes) { maxAvgMistakes = avgMistakes; highestRiskModule = moduleName; }
                     if (avgMood < minAvgMood) { minAvgMood = avgMood; lowestMoodModule = moduleName; }
                 }
@@ -258,7 +242,17 @@
 
                 drawCharts(labels, avgMistakesData, avgMoodData);
 
-                // Build employee rows
+                // Fetch names separately — if this fails, fall back to email prefix
+                const nameMap = {};
+                try {
+                    const { data: roles } = await db.from('user_roles').select('email, Name');
+                    if (roles) {
+                        roles.forEach(r => {
+                            if (r.email) nameMap[r.email.toLowerCase()] = r.Name || null;
+                        });
+                    }
+                } catch (e) {}
+
                 employeeRows = Object.entries(userStats).map(([email, s]) => ({
                     name: nameMap[email] || email.split('@')[0],
                     email,
@@ -269,6 +263,7 @@
 
                 renderEmployeeTable();
             } catch (err) {
+                console.error('fetchAnalytics error:', err);
                 document.getElementById('risk-module').innerText = "Database Error";
                 document.getElementById('risk-stat').innerText = "";
                 document.getElementById('mood-module').innerText = "Database Error";
