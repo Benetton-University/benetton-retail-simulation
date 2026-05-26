@@ -245,10 +245,10 @@
                 // Fetch names separately — if this fails, fall back to email prefix
                 const nameMap = {};
                 try {
-                    const { data: roles } = await db.from('user_roles').select('email, Name');
+                    const { data: roles } = await db.from('user_roles').select('email, name');
                     if (roles) {
                         roles.forEach(r => {
-                            if (r.email) nameMap[r.email.toLowerCase()] = r.Name || null;
+                            if (r.email) nameMap[r.email.toLowerCase()] = r.name || null;
                         });
                     }
                 } catch (e) {}
