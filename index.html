@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <link rel="preconnect" href="https://lttebmghqpahjclycxau.supabase.co">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Benetton L&D Hub</title>
     <link rel="stylesheet" href="hub-style.css">
@@ -155,102 +157,99 @@ async function showLoggedInView(email) {
             // Do not make the curriculum cards wait for the admin check!
             loadDynamicCourses(); 
 
-            // Separately handle the role verification in the background
+            // Apply cached role instantly, then verify in background
+            const ROLE_CACHE_KEY = `benetton_role_${email}`;
+            try {
+                const cachedRole = JSON.parse(localStorage.getItem(ROLE_CACHE_KEY));
+                if (cachedRole && Date.now() - cachedRole.ts < 30 * 60 * 1000) {
+                    if (nameDisplay) nameDisplay.textContent = cachedRole.name || email.split('@')[0];
+                    if (cachedRole.role === 'admin' && document.getElementById('admin-controls')) {
+                        document.getElementById('admin-controls').style.display = 'block';
+                    }
+                }
+            } catch(e) {}
+
             const { data, error } = await supabaseClient
                 .from('user_roles')
                 .select('*')
                 .eq('email', email)
-                .single(); 
+                .single();
 
             if (data) {
-                // Update with the authentic name from your CSV data
-                if (nameDisplay) {
-                    nameDisplay.textContent = data.Name || data.name || email.split('@')[0];
-                }
-                
-                // Overlay admin privileges if authorized
+                if (nameDisplay) nameDisplay.textContent = data.Name || data.name || email.split('@')[0];
                 if (data.role === 'admin' && document.getElementById('admin-controls')) {
                     document.getElementById('admin-controls').style.display = 'block';
                 }
+                try { localStorage.setItem(ROLE_CACHE_KEY, JSON.stringify({ name: data.Name || data.name, role: data.role, ts: Date.now() })); } catch(e) {}
             }
         }
 
-        // UPDATED: Fetches all modules and splits them cleanly by type
-        async function loadDynamicCourses() {
+        const MODULE_CACHE_KEY = 'benetton_modules_v1';
+        const MODULE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+        function renderModules(data) {
             const simGrid = document.getElementById('simulation-grid');
             const quizGrid = document.getElementById('quiz-grid');
             const assessGrid = document.getElementById('assessment-grid');
             const priorityGrid = document.getElementById('priority-grid');
-            
-            const { data, error } = await supabaseClient
-                .from('module_content')
-                .select('module_name, description, tags, module_type')
-                .order('created_at', { ascending: true });
 
-            if (error || !data) {
-                simGrid.innerHTML = '<p style="color:red;">Error connecting to backend curriculum table.</p>';
-                quizGrid.innerHTML = '';
-                assessGrid.innerHTML = '';
-                return;
-            }
-
-            // Flush out loading placeholders
-            simGrid.innerHTML = '';
-            quizGrid.innerHTML = '';
-            assessGrid.innerHTML = '';
-            priorityGrid.innerHTML = '';
-
-            let hasSims = false;
-            let hasQuizzes = false;
-            let hasAssessments = false;
-            let hasPriority = false;
+            simGrid.innerHTML = ''; quizGrid.innerHTML = ''; assessGrid.innerHTML = ''; priorityGrid.innerHTML = '';
+            let hasSims = false, hasQuizzes = false, hasAssessments = false, hasPriority = false;
 
             data.forEach(mod => {
                 const safeUrl = `simulation.html?module=${encodeURIComponent(mod.module_name)}`;
-                
                 let tagsHtml = '';
-                if (mod.tags) {
-                    const tagArray = mod.tags.split(',');
-                    tagArray.forEach(tag => {
-                        tagsHtml += `<span>🏷️ ${tag.trim()}</span>`;
-                    });
-                }
+                if (mod.tags) mod.tags.split(',').forEach(tag => { tagsHtml += `<span>🏷️ ${tag.trim()}</span>`; });
 
                 const cardHtml = `
                     <a href="${safeUrl}" class="training-card">
                         <div class="card-content">
                             <h3>${mod.module_name}</h3>
                             <p>${mod.description}</p>
-                            <div class="tags">
-                                ${tagsHtml}
-                            </div>
+                            <div class="tags">${tagsHtml}</div>
                         </div>
                         <div class="card-arrow">→</div>
                     </a>
                 `;
 
-                // Sorting mechanism based on table type flag
-                const type = mod.module_type || 'scenario'; 
-                if (type === 'scenario') {
-                    simGrid.innerHTML += cardHtml;
-                    hasSims = true;
-                } else if (type === 'quiz') {
-                    quizGrid.innerHTML += cardHtml;
-                    hasQuizzes = true;
-                } else if (type === 'assessment') {
-                    assessGrid.innerHTML += cardHtml;
-                    hasAssessments = true;
-                } else if (type === 'priority') {
-                    priorityGrid.innerHTML += cardHtml;
-                    hasPriority = true;
-                }
+                const type = mod.module_type || 'scenario';
+                if (type === 'scenario')        { simGrid.innerHTML += cardHtml;      hasSims = true; }
+                else if (type === 'quiz')        { quizGrid.innerHTML += cardHtml;     hasQuizzes = true; }
+                else if (type === 'assessment')  { assessGrid.innerHTML += cardHtml;   hasAssessments = true; }
+                else if (type === 'priority')    { priorityGrid.innerHTML += cardHtml; hasPriority = true; }
             });
 
-            // Fallback status messaging for missing course types
-            if (!hasSims) simGrid.innerHTML = '<p style="padding: 10px; color: #999; font-style: italic;">No active situational scenarios available right now.</p>';
-            if (!hasQuizzes) quizGrid.innerHTML = '<p style="padding: 10px; color: #999; font-style: italic;">No core knowledge check quizzes deployed at this time.</p>';
-            if (!hasAssessments) assessGrid.innerHTML = '<p style="padding: 10px; color: #999; font-style: italic;">No formal certification assessments listed for your profile.</p>';
-            if (!hasPriority) priorityGrid.innerHTML = '<p style="padding: 10px; color: #999; font-style: italic;">No priority surveys available right now.</p>';
+            if (!hasSims)        simGrid.innerHTML      = '<p style="padding:10px;color:#999;font-style:italic;">No active situational scenarios available right now.</p>';
+            if (!hasQuizzes)     quizGrid.innerHTML     = '<p style="padding:10px;color:#999;font-style:italic;">No core knowledge check quizzes deployed at this time.</p>';
+            if (!hasAssessments) assessGrid.innerHTML   = '<p style="padding:10px;color:#999;font-style:italic;">No formal certification assessments listed for your profile.</p>';
+            if (!hasPriority)    priorityGrid.innerHTML = '<p style="padding:10px;color:#999;font-style:italic;">No priority surveys available right now.</p>';
+        }
+
+        async function loadDynamicCourses() {
+            // Serve from cache instantly, then refresh silently in the background
+            try {
+                const cached = JSON.parse(localStorage.getItem(MODULE_CACHE_KEY));
+                if (cached && Date.now() - cached.ts < MODULE_CACHE_TTL) {
+                    renderModules(cached.data);
+                    fetchAndCacheModules(false); // background refresh
+                    return;
+                }
+            } catch(e) {}
+            await fetchAndCacheModules(true);
+        }
+
+        async function fetchAndCacheModules(showErrors) {
+            const { data, error } = await supabaseClient
+                .from('module_content')
+                .select('module_name, description, tags, module_type')
+                .order('created_at', { ascending: true });
+
+            if (error || !data) {
+                if (showErrors) document.getElementById('simulation-grid').innerHTML = '<p style="color:red;">Error connecting to backend curriculum table.</p>';
+                return;
+            }
+            try { localStorage.setItem(MODULE_CACHE_KEY, JSON.stringify({ data, ts: Date.now() })); } catch(e) {}
+            renderModules(data);
         }
 
         async function saveNewPassword() {
