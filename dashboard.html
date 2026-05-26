@@ -242,15 +242,14 @@
 
                 drawCharts(labels, avgMistakesData, avgMoodData);
 
-                // Fetch names separately — if this fails, fall back to email prefix
+                // Build name map from static CSV (avoids Supabase RLS row restrictions)
                 const nameMap = {};
                 try {
-                    const { data: roles } = await db.from('user_roles').select('email, name');
-                    if (roles) {
-                        roles.forEach(r => {
-                            if (r.email) nameMap[r.email.toLowerCase()] = r.name || null;
-                        });
-                    }
+                    const csvText = await fetch('employees.csv').then(r => r.text());
+                    csvText.trim().split('\n').slice(1).forEach(line => {
+                        const [name, email] = line.split(',');
+                        if (email) nameMap[email.trim().toLowerCase()] = name.trim();
+                    });
                 } catch (e) {}
 
                 employeeRows = Object.entries(userStats).map(([email, s]) => ({
