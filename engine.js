@@ -78,9 +78,11 @@ async function fetchModuleFromCloud() {
             if (moduleType === 'quiz') {
                 initQuizMode();
             } else if (moduleType === 'assessment') {
-                initAssessmentMode(); // <--- ROUTE TO MODE C
+                initAssessmentMode();
+            } else if (moduleType === 'priority') {
+                initPriorityMode();
             } else {
-                loadStep('start'); 
+                loadStep('start');
             }
         } else {
             chatWindow.innerHTML = '<p style="color:red; text-align:center; margin-top: 20px;">Error: Module not found.</p>';
@@ -611,6 +613,127 @@ async function calculateAndSaveAssessmentResults() {
         buttonGrid.innerHTML = `
             <div style="text-align:center;">
                 <a href="index.html" style="padding: 12px 24px; background: #00563f; color: white; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 1.1rem;">Return to Dashboard</a>
+            </div>`;
+    }
+}
+
+// ==========================================
+// MODE D: PRIORITY SURVEY LOGIC
+// ==========================================
+
+let priorityState = {
+    currentIndex: 0,
+    allRankings: []
+};
+
+function initPriorityMode() {
+    chatWindow.style.backgroundColor = '#ffffff';
+    chatWindow.style.border = 'none';
+    chatWindow.style.boxShadow = 'none';
+    loadPriorityQuestion();
+}
+
+function loadPriorityQuestion() {
+    const q = scenarioData.questions[priorityState.currentIndex];
+    const total = scenarioData.questions.length;
+    const n = q.options.length;
+
+    chatWindow.innerHTML = `
+        <div style="padding: 10px; animation: slideIn 0.2s ease-out;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding:12px 16px; background:#f8f9fa; border-radius:10px; font-weight:bold; color:#555; font-size:0.95rem;">
+                <span>🧭 PRIORITY SURVEY</span>
+                <span>Situation ${priorityState.currentIndex + 1} / ${total}</span>
+            </div>
+            <h3 style="color:#6f42c1; margin-bottom:12px; font-size:1.25rem;">${q.title}</h3>
+            <div style="background:#f8f9fa; border-left:4px solid #6f42c1; padding:15px; border-radius:6px; margin-bottom:20px; line-height:1.6; color:#444;">
+                <strong>Situation:</strong> ${q.situation}
+            </div>
+            <p style="color:#666; font-size:0.9rem; margin-bottom:15px;">Rank each action from <strong>1 (Highest Priority)</strong> to <strong>${n} (Lowest Priority)</strong>. Each number can only be used once.</p>
+        </div>
+    `;
+
+    buttonGrid.innerHTML = '';
+    buttonGrid.style.gridTemplateColumns = '1fr';
+
+    q.options.forEach((optText, i) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex; align-items:center; gap:15px; background:white; border:1px solid #dee2e6; border-radius:8px; padding:14px 16px; margin-bottom:8px;';
+        row.innerHTML = `
+            <input type="number" id="rank-input-${i}" min="1" max="${n}"
+                style="width:60px; padding:8px; border:2px solid #dee2e6; border-radius:6px; font-size:1.1rem; font-weight:bold; text-align:center; color:#6f42c1;"
+                placeholder="—">
+            <span style="flex:1; font-size:1rem; color:#333; line-height:1.5;">${optText}</span>
+        `;
+        buttonGrid.appendChild(row);
+    });
+
+    const submitBtn = document.createElement('button');
+    submitBtn.style.cssText = 'margin-top:15px; width:100%; background:#6f42c1; color:white; font-weight:bold; font-size:1rem; border:none; padding:14px; border-radius:8px; cursor:pointer;';
+    submitBtn.innerText = (priorityState.currentIndex + 1 < total) ? 'Submit & Continue →' : 'Submit & Finish ✔';
+    submitBtn.onclick = submitPriorityAnswer;
+    buttonGrid.appendChild(submitBtn);
+}
+
+function submitPriorityAnswer() {
+    const n = scenarioData.questions[priorityState.currentIndex].options.length;
+    const rankings = [];
+    const used = new Set();
+
+    for (let i = 0; i < n; i++) {
+        const val = parseInt(document.getElementById(`rank-input-${i}`).value);
+        if (isNaN(val) || val < 1 || val > n) {
+            alert(`Please assign a priority (1–${n}) to every action.`);
+            return;
+        }
+        if (used.has(val)) {
+            alert(`Each priority number can only be used once. You have assigned ${val} more than once.`);
+            return;
+        }
+        used.add(val);
+        rankings.push(val);
+    }
+
+    priorityState.allRankings.push({
+        question: priorityState.currentIndex,
+        title: scenarioData.questions[priorityState.currentIndex].title,
+        rankings
+    });
+
+    if (priorityState.currentIndex + 1 < scenarioData.questions.length) {
+        priorityState.currentIndex++;
+        loadPriorityQuestion();
+    } else {
+        completePrioritySurvey();
+    }
+}
+
+async function completePrioritySurvey() {
+    chatWindow.innerHTML = `
+        <div style="text-align:center; padding:50px 20px; animation: slideIn 0.3s ease-out;">
+            <div style="font-size:3.5rem; margin-bottom:15px;">✅</div>
+            <h2 style="color:#6f42c1; margin-bottom:12px;">Survey Complete</h2>
+            <p style="color:#666; font-size:1.05rem; line-height:1.6;">Thank you — your responses have been recorded.<br>There are no right or wrong answers here.</p>
+        </div>
+    `;
+    buttonGrid.innerHTML = '<p style="text-align:center; color:#999; font-size:0.9rem;">Saving your responses...</p>';
+
+    const { error } = await sbClient
+        .from('training_logs')
+        .insert([{
+            email: sessionData.employeeEmail,
+            module_name: sessionData.moduleName,
+            score: 0,
+            final_mood_score: 0,
+            mistakes: JSON.stringify(priorityState.allRankings)
+        }]);
+
+    if (error) {
+        console.error("Priority survey save error:", error);
+        buttonGrid.innerHTML = '<p style="color:red; text-align:center;">Error saving responses. Please contact IT.</p>';
+    } else {
+        buttonGrid.innerHTML = `
+            <div style="text-align:center;">
+                <a href="index.html" style="padding:12px 28px; background:#6f42c1; color:white; text-decoration:none; border-radius:6px; display:inline-block; font-weight:bold; font-size:1rem;">Return to Hub</a>
             </div>`;
     }
 }

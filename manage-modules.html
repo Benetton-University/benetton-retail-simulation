@@ -31,7 +31,7 @@
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
         /* Choice Grid Matrix Layout */
-        .type-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 30px; width: 100%; }
+        .type-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 30px; width: 100%; }
         .type-card { border: 2px solid #eaeaea; border-radius: 10px; padding: 30px 20px; text-align: center; cursor: pointer; transition: all 0.2s ease; text-decoration: none; color: #333; display: flex; flex-direction: column; align-items: center; background: white; height: 100%; }
         .type-card:hover { border-color: #00563f; background: #f8fbfa; transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,86,63,0.1); }
         .type-icon { font-size: 3rem; margin-bottom: 20px; }
@@ -96,6 +96,12 @@
                     <div class="type-icon">📋</div>
                     <h3>Standard Assessment</h3>
                     <p>Create a static list of questions and answers for formal evaluations and compliance tracking.</p>
+                </a>
+
+                <a href="priority-builder.html" class="type-card">
+                    <div class="type-icon">🧭</div>
+                    <h3>Priority Survey</h3>
+                    <p>Present situational scenarios where employees rank actions by priority — revealing decision-making instincts with no right or wrong answer.</p>
                 </a>
             </div>
         </div>
@@ -201,6 +207,8 @@
                 window.location.href = `quiz-builder.html?edit=${id}`;
             } else if (type === 'assessment') {
                 window.location.href = `assessment-builder.html?edit=${id}`;
+            } else if (type === 'priority') {
+                window.location.href = `priority-builder.html?edit=${id}`;
             } else {
                 window.location.href = `module-builder.html?edit=${id}`;
             }

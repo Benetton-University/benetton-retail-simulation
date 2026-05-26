@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benetton Training Hub - Priority Survey Builder</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f4f7f6; color: #333; padding: 40px 20px; }
+
+        .floating-hamburger { position: fixed; top: 20px; left: 20px; font-size: 1.8rem; background: white; border: 2px solid #00563f; color: #00563f; border-radius: 8px; cursor: pointer; z-index: 990; padding: 5px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .slide-menu { position: fixed; top: 0; left: -280px; width: 250px; height: 100vh; background-color: #00563f; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.2); transition: left 0.3s ease-in-out; z-index: 1000; }
+        .slide-menu.active { left: 0; }
+        .slide-menu h3 { color: white; margin: 50px 0 20px 10px; font-size: 1.2rem; }
+        .menu-link { display: block; color: white; text-decoration: none; padding: 15px 10px; font-size: 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .menu-link:hover { background-color: rgba(255,255,255,0.1); border-left: 4px solid #fff; }
+        .close-btn { position: absolute; top: 15px; right: 20px; background: none; border: none; color: white; font-size: 2rem; cursor: pointer; }
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 999; }
+        .overlay.active { display: block; }
+
+        .builder-container { max-width: 900px; margin: 40px auto 0; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border-top: 6px solid #6f42c1; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 8px; color: #555; }
+        .form-control { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; }
+        .form-control:focus { outline: none; border-color: #6f42c1; box-shadow: 0 0 5px rgba(111,66,193,0.2); }
+
+        .question-card { background: #f8f9fa; border: 1px solid #e9ecef; border-left: 4px solid #6f42c1; border-radius: 8px; padding: 20px; margin-bottom: 20px; position: relative; }
+        .remove-card-btn { position: absolute; top: 15px; right: 15px; background: #f8d7da; color: #721c24; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
+
+        .option-row { display: flex; align-items: center; gap: 10px; background: white; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 8px; }
+        .option-label { font-weight: bold; color: #6f42c1; min-width: 22px; font-size: 0.95rem; }
+        .option-row input[type="text"] { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95rem; }
+        .option-row input[type="text"]:focus { outline: none; border-color: #6f42c1; }
+        .remove-opt-btn { background: none; border: none; color: #adb5bd; cursor: pointer; font-size: 1.1rem; padding: 2px 6px; transition: 0.15s; }
+        .remove-opt-btn:hover { color: #dc3545; }
+
+        .btn-primary { background: #6f42c1; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: 0.2s; }
+        .btn-primary:hover { background: #5a32a3; }
+        .btn-secondary { background: #e9ecef; color: #333; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+        .btn-secondary:hover { background: #dee2e6; }
+        .btn-add-opt { background: #f3eeff; color: #6f42c1; border: 1px solid #d4b8ff; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold; transition: 0.2s; margin-top: 6px; }
+        .btn-add-opt:hover { background: #e8d8ff; }
+    </style>
+</head>
+<body>
+
+    <button id="menu-toggle" class="floating-hamburger">☰</button>
+    <nav id="sidebar" class="slide-menu">
+        <button id="close-menu" class="close-btn">&times;</button>
+        <h3>Benetton Training Hub</h3>
+        <a href="dashboard.html" class="menu-link">📊 Analytics Dashboard</a>
+        <a href="manage-modules.html" class="menu-link">⚙️ Manage Modules</a>
+        <a href="index.html" class="menu-link">⬅️ Back to Hub</a>
+    </nav>
+    <div id="sidebar-overlay" class="overlay"></div>
+
+    <div class="builder-container">
+        <div class="page-header">
+            <div>
+                <h2 id="page-title" style="color: #333; margin-bottom: 5px;">Priority Survey Builder</h2>
+                <a href="manage-modules.html" style="color: #666; text-decoration: none;">&larr; Back to Curriculum</a>
+            </div>
+            <button class="btn-primary" onclick="publishSurvey()">Publish Survey</button>
+        </div>
+
+        <div class="form-group">
+            <label>Survey Title</label>
+            <input type="text" id="survey-title" class="form-control" placeholder="e.g., Store Opening Priorities">
+        </div>
+        <div class="form-group">
+            <label>Description</label>
+            <textarea id="survey-desc" class="form-control" rows="2" placeholder="Briefly describe what this survey measures..."></textarea>
+        </div>
+        <div class="form-group">
+            <label>Tags (Comma separated)</label>
+            <input type="text" id="survey-tags" class="form-control" placeholder="e.g., Prioritisation, Mindset, SOPs">
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
+
+        <h3 style="margin-bottom: 5px; color: #333;">Situations</h3>
+        <p style="color: #666; font-size: 0.9rem; margin-bottom: 20px;">Each situation presents a set of actions — employees rank them by priority. There are no right or wrong answers.</p>
+
+        <div id="questions-container"></div>
+        <button class="btn-secondary" onclick="addQuestionCard()">➕ Add Situation</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const dbUrl = 'https://lttebmghqpahjclycxau.supabase.co';
+        const dbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0dGVibWdocXBhaGpjbHljeGF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NDE4NDIsImV4cCI6MjA5MzAxNzg0Mn0.bwsArSg1M4GO0mJV83jttCikkeoXj_HL_yEsRlxptzE';
+        const sbClient = window.supabase.createClient(dbUrl, dbKey);
+
+        let questionCount = 0;
+        let optionCounts = {};
+        let editingModuleId = null;
+
+        function addQuestionCard(prefillData = null) {
+            questionCount++;
+            const qId = questionCount;
+            optionCounts[qId] = 0;
+
+            const cardHTML = `
+                <div class="question-card" id="q-card-${qId}">
+                    <button class="remove-card-btn" onclick="document.getElementById('q-card-${qId}').remove()">Remove</button>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label>Situation Title</label>
+                        <input type="text" class="form-control q-title" placeholder="e.g., Store Opening SOPs">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label>Situation Description</label>
+                        <textarea class="form-control q-situation" rows="3" placeholder="Describe the scenario the employee must respond to..."></textarea>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label>Actions to Rank</label>
+                        <p style="font-size:0.82rem; color:#888; margin-bottom:10px; font-weight:normal;">Employees will rank these from 1 (highest priority) to N (lowest). No right or wrong answer.</p>
+                        <div id="options-list-${qId}"></div>
+                        <button class="btn-add-opt" onclick="addOption(${qId})">+ Add Action</button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('questions-container').insertAdjacentHTML('beforeend', cardHTML);
+
+            if (prefillData) {
+                document.querySelector(`#q-card-${qId} .q-title`).value = prefillData.title || '';
+                document.querySelector(`#q-card-${qId} .q-situation`).value = prefillData.situation || '';
+                (prefillData.options || []).forEach(opt => addOption(qId, opt));
+            } else {
+                addOption(qId); addOption(qId); addOption(qId);
+            }
+        }
+
+        function addOption(qId, value = '') {
+            optionCounts[qId] = (optionCounts[qId] || 0) + 1;
+            const oId = optionCounts[qId];
+            const letter = String.fromCharCode(64 + oId);
+            const escaped = value.replace(/"/g, '&quot;');
+            const optHTML = `
+                <div class="option-row" id="opt-${qId}-${oId}">
+                    <span class="option-label">${letter}.</span>
+                    <input type="text" placeholder="Describe this action..." value="${escaped}">
+                    <button class="remove-opt-btn" onclick="document.getElementById('opt-${qId}-${oId}').remove()" title="Remove">✕</button>
+                </div>
+            `;
+            document.getElementById(`options-list-${qId}`).insertAdjacentHTML('beforeend', optHTML);
+        }
+
+        async function loadSurveyForEdit(id) {
+            editingModuleId = parseInt(id);
+            document.getElementById('page-title').innerText = 'Edit Priority Survey';
+            document.querySelector('.btn-primary').innerText = 'Save Changes';
+
+            const { data, error } = await sbClient
+                .from('module_content')
+                .select('module_name, description, tags, scenario_data')
+                .eq('id', editingModuleId)
+                .single();
+
+            if (error || !data) {
+                alert('Failed to load survey for editing.');
+                window.location.href = 'manage-modules.html';
+                return;
+            }
+
+            document.getElementById('survey-title').value = data.module_name || '';
+            document.getElementById('survey-desc').value = data.description || '';
+            document.getElementById('survey-tags').value = data.tags || '';
+            (data.scenario_data?.questions || []).forEach(q => addQuestionCard(q));
+        }
+
+        async function publishSurvey() {
+            const title = document.getElementById('survey-title').value.trim();
+            const desc = document.getElementById('survey-desc').value.trim();
+            const tags = document.getElementById('survey-tags').value.trim();
+
+            if (!title) return alert('Please enter a Survey Title.');
+            const cards = document.querySelectorAll('.question-card');
+            if (cards.length === 0) return alert('Add at least one situation.');
+
+            const surveyData = { questions: [] };
+            let valid = true;
+
+            cards.forEach(card => {
+                const t = card.querySelector('.q-title').value.trim();
+                const s = card.querySelector('.q-situation').value.trim();
+                const opts = Array.from(card.querySelectorAll('.option-row input[type="text"]')).map(i => i.value.trim());
+                if (!t || !s || opts.length < 2 || opts.some(o => !o)) valid = false;
+                surveyData.questions.push({ title: t, situation: s, options: opts });
+            });
+
+            if (!valid) return alert('Please complete all fields. Each situation needs a title, description, and at least 2 actions.');
+
+            const btn = document.querySelector('.btn-primary');
+            btn.innerText = 'Saving...';
+            btn.disabled = true;
+
+            let dbError;
+            if (editingModuleId) {
+                const { error } = await sbClient.from('module_content')
+                    .update({ module_name: title, description: desc, tags: tags, scenario_data: surveyData })
+                    .eq('id', editingModuleId);
+                dbError = error;
+            } else {
+                const { error } = await sbClient.from('module_content')
+                    .insert([{ module_name: title, description: desc, tags: tags, scenario_data: surveyData, module_type: 'priority' }]);
+                dbError = error;
+            }
+
+            if (dbError) {
+                alert('Error saving: ' + dbError.message);
+                btn.innerText = editingModuleId ? 'Save Changes' : 'Publish Survey';
+                btn.disabled = false;
+            } else {
+                alert(editingModuleId ? 'Survey updated!' : 'Survey published!');
+                window.location.href = 'manage-modules.html';
+            }
+        }
+
+        window.onload = async () => {
+            const params = new URLSearchParams(window.location.search);
+            const editId = params.get('edit');
+            if (editId) {
+                await loadSurveyForEdit(editId);
+            } else {
+                addQuestionCard();
+            }
+        };
+
+        const menuToggle = document.getElementById('menu-toggle');
+        const closeMenu = document.getElementById('close-menu');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        function toggleSidebar() { sidebar.classList.toggle('active'); overlay.classList.toggle('active'); }
+        menuToggle.addEventListener('click', toggleSidebar);
+        closeMenu.addEventListener('click', toggleSidebar);
+        overlay.addEventListener('click', toggleSidebar);
+    </script>
+</body>
+</html>
