@@ -43,6 +43,28 @@
         .canvas-container { position: relative; height: 280px; width: 100%; }
         
         @media (max-width: 768px) { .cards-container, .charts-container { flex-direction: column; } }
+
+        /* Employee Performance Table */
+        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
+        .section-header h2 { font-size: 1.3rem; color: #333; }
+        .section-header p { font-size: 0.88rem; color: #888; }
+        .sort-controls { display: flex; gap: 8px; }
+        .sort-btn { background: white; border: 1px solid #ddd; border-radius: 5px; padding: 6px 12px; font-size: 0.82rem; color: #555; cursor: pointer; transition: 0.15s; }
+        .sort-btn:hover { border-color: #00563f; color: #00563f; }
+        .sort-btn.active { background: #00563f; color: white; border-color: #00563f; }
+        .employee-table-wrap { background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow: hidden; margin-bottom: 40px; }
+        .employee-table { width: 100%; border-collapse: collapse; }
+        .employee-table th { background: #f9f9f9; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.8px; color: #888; font-weight: 600; padding: 12px 16px; text-align: left; border-bottom: 1px solid #eaeaea; }
+        .employee-table td { padding: 13px 16px; font-size: 0.95rem; border-bottom: 1px solid #f0f0f0; color: #333; }
+        .employee-table tr:last-child td { border-bottom: none; }
+        .employee-table tr:hover td { background: #fafafa; }
+        .pill { display: inline-block; border-radius: 12px; padding: 3px 10px; font-size: 0.8rem; font-weight: 600; }
+        .pill-green { background: #e8f5e9; color: #2e7d32; }
+        .pill-red { background: #ffebee; color: #c62828; }
+        .pill-yellow { background: #fff8e1; color: #f57f17; }
+        .mini-bar-track { background: #eee; border-radius: 3px; height: 6px; width: 80px; display: inline-block; vertical-align: middle; margin-left: 8px; }
+        .mini-bar-fill { height: 100%; border-radius: 3px; }
+        .table-empty { text-align: center; color: #aaa; padding: 40px; font-style: italic; }
     </style>
 </head>
 <body>
@@ -99,6 +121,33 @@
                 </div>
             </div>
         </div>
+
+        <div class="section-header">
+            <div>
+                <h2>Employee Performance</h2>
+                <p>Completions and average policy errors per staff member</p>
+            </div>
+            <div class="sort-controls">
+                <button class="sort-btn active" id="sort-name" onclick="sortEmployeeTable('name')">Name</button>
+                <button class="sort-btn" id="sort-completions" onclick="sortEmployeeTable('completions')">Completions</button>
+                <button class="sort-btn" id="sort-errors" onclick="sortEmployeeTable('errors')">Avg Errors</button>
+            </div>
+        </div>
+        <div class="employee-table-wrap">
+            <table class="employee-table">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Completions</th>
+                        <th>Avg Policy Errors</th>
+                        <th>Avg Customer Mood</th>
+                    </tr>
+                </thead>
+                <tbody id="employee-table-body">
+                    <tr><td colspan="4" class="table-empty">Loading employee data...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -135,25 +184,55 @@
         // ==========================================
         // HISTORICAL CHARTS LOGIC
         // ==========================================
+        let employeeRows = [];
+        let currentSort = 'name';
+
         async function fetchAnalytics() {
             try {
-                const { data, error } = await db.from('training_logs').select('*');
+                const [logsResult, rolesResult] = await Promise.all([
+                    db.from('training_logs').select('*'),
+                    db.from('user_roles').select('email, Name, name')
+                ]);
+
+                const { data, error } = logsResult;
                 if (error) throw error;
+
+                // Build email→name lookup
+                const nameMap = {};
+                if (rolesResult.data) {
+                    rolesResult.data.forEach(r => {
+                        if (r.email) nameMap[r.email.toLowerCase()] = r.Name || r.name || null;
+                    });
+                }
+
                 if (!data || data.length === 0) {
                     document.getElementById('risk-module').innerText = "No Data Yet";
                     document.getElementById('mood-module').innerText = "No Data Yet";
+                    document.getElementById('employee-table-body').innerHTML = '<tr><td colspan="4" class="table-empty">No training data available yet.</td></tr>';
                     return;
                 }
-                
+
                 document.getElementById('total-sims').innerText = data.length;
 
                 let moduleStats = {};
+                let userStats = {};
+
                 data.forEach(log => {
+                    // Module aggregation
                     let mod = log.module_name || "Unknown Module";
                     if (!moduleStats[mod]) { moduleStats[mod] = { runs: 0, totalMood: 0, totalMistakes: 0 }; }
                     moduleStats[mod].runs += 1;
                     moduleStats[mod].totalMood += parseInt(log.final_mood_score) || 0;
-                    moduleStats[mod].totalMistakes += parseInt(log.mistakes) || 0; 
+                    moduleStats[mod].totalMistakes += parseInt(log.mistakes) || 0;
+
+                    // User aggregation
+                    const emailKey = (log.email || 'unknown').toLowerCase();
+                    if (!userStats[emailKey]) {
+                        userStats[emailKey] = { completions: 0, totalMistakes: 0, totalMood: 0 };
+                    }
+                    userStats[emailKey].completions += 1;
+                    userStats[emailKey].totalMistakes += parseInt(log.mistakes) || 0;
+                    userStats[emailKey].totalMood += parseInt(log.final_mood_score) || 0;
                 });
 
                 let labels = [], avgMistakesData = [], avgMoodData = [];
@@ -178,12 +257,65 @@
                 document.getElementById('mood-stat').innerText = `${minAvgMood}% avg mood score`;
 
                 drawCharts(labels, avgMistakesData, avgMoodData);
+
+                // Build employee rows
+                employeeRows = Object.entries(userStats).map(([email, s]) => ({
+                    name: nameMap[email] || email.split('@')[0],
+                    email,
+                    completions: s.completions,
+                    avgErrors: parseFloat((s.totalMistakes / s.completions).toFixed(1)),
+                    avgMood: Math.round(s.totalMood / s.completions)
+                }));
+
+                renderEmployeeTable();
             } catch (err) {
                 document.getElementById('risk-module').innerText = "Database Error";
                 document.getElementById('risk-stat').innerText = "";
                 document.getElementById('mood-module').innerText = "Database Error";
                 document.getElementById('mood-stat').innerText = "";
+                document.getElementById('employee-table-body').innerHTML = '<tr><td colspan="4" class="table-empty">Error loading data.</td></tr>';
             }
+        }
+
+        function sortEmployeeTable(col) {
+            currentSort = col;
+            document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('sort-' + col).classList.add('active');
+            renderEmployeeTable();
+        }
+
+        function renderEmployeeTable() {
+            const sorted = [...employeeRows].sort((a, b) => {
+                if (currentSort === 'name') return a.name.localeCompare(b.name);
+                if (currentSort === 'completions') return b.completions - a.completions;
+                if (currentSort === 'errors') return b.avgErrors - a.avgErrors;
+                return 0;
+            });
+
+            const maxErrors = Math.max(...sorted.map(r => r.avgErrors), 1);
+
+            const tbody = document.getElementById('employee-table-body');
+            if (sorted.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="table-empty">No employee data yet.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = sorted.map(row => {
+                const errPct = Math.round((row.avgErrors / maxErrors) * 100);
+                const errColor = row.avgErrors === 0 ? '#22c55e' : row.avgErrors <= 1 ? '#f59e0b' : '#ef4444';
+                const moodColor = row.avgMood >= 70 ? '#22c55e' : row.avgMood >= 40 ? '#f59e0b' : '#ef4444';
+                const moodClass = row.avgMood >= 70 ? 'pill-green' : row.avgMood >= 40 ? 'pill-yellow' : 'pill-red';
+                return `
+                    <tr>
+                        <td><strong>${row.name}</strong><br><span style="font-size:0.78rem;color:#aaa;">${row.email}</span></td>
+                        <td><span class="pill pill-green">${row.completions} module${row.completions !== 1 ? 's' : ''}</span></td>
+                        <td>
+                            <strong style="color:${errColor};">${row.avgErrors}</strong>
+                            <span class="mini-bar-track"><span class="mini-bar-fill" style="width:${errPct}%;background:${errColor};"></span></span>
+                        </td>
+                        <td><span class="pill ${moodClass}">${row.avgMood}%</span></td>
+                    </tr>`;
+            }).join('');
         }
 
         function drawCharts(labels, errorsData, moodData) {
