@@ -201,23 +201,25 @@
 
                 document.getElementById('total-sims').innerText = data.length;
 
-                // Identify simulation modules (the only type that tracks customer mood)
+                // Identify simulation modules (the only type that tracks customer mood).
+                // Non-simulation types (quiz, assessment, priority) have explicit module_type values;
+                // simulation modules were built without one so their module_type is null.
+                const nonSimTypes = new Set(['quiz', 'assessment', 'priority']);
                 const simModules = new Set();
-                try {
-                    const { data: mods } = await db.from('module_content').select('module_name, module_type');
-                    if (mods) {
-                        mods.forEach(m => {
-                            if (!m.module_type || m.module_type === 'simulation') simModules.add(m.module_name);
-                        });
-                    }
-                } catch (e) {}
+                const { data: mods, error: modsError } = await db.from('module_content').select('module_name, module_type');
+                if (mods) {
+                    mods.forEach(m => {
+                        if (!nonSimTypes.has(m.module_type)) simModules.add(m.module_name);
+                    });
+                }
+                if (modsError) console.error('module_content fetch error:', modsError);
 
                 let moduleStats = {};
                 let userStats = {};
 
                 data.forEach(log => {
                     const mod = log.module_name || "Unknown Module";
-                    const isSim = simModules.size === 0 || simModules.has(mod);
+                    const isSim = simModules.has(mod);
 
                     if (!moduleStats[mod]) { moduleStats[mod] = { runs: 0, totalMistakes: 0, totalMood: 0, moodRuns: 0 }; }
                     moduleStats[mod].runs += 1;
