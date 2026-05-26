@@ -199,16 +199,16 @@
                     return;
                 }
 
-                document.getElementById('total-sims').innerText = data.length;
-
                 // Identify simulation modules (the only type that tracks customer mood).
                 // Non-simulation types (quiz, assessment, priority) have explicit module_type values;
                 // simulation modules were built without one so their module_type is null.
                 const nonSimTypes = new Set(['quiz', 'assessment', 'priority']);
+                const activeModules = new Set();
                 const simModules = new Set();
                 const { data: mods, error: modsError } = await db.from('module_content').select('module_name, module_type');
                 if (mods) {
                     mods.forEach(m => {
+                        activeModules.add(m.module_name);
                         if (!nonSimTypes.has(m.module_type)) simModules.add(m.module_name);
                     });
                 }
@@ -219,6 +219,7 @@
 
                 data.forEach(log => {
                     const mod = log.module_name || "Unknown Module";
+                    if (activeModules.size > 0 && !activeModules.has(mod)) return; // skip deleted/test modules
                     const isSim = simModules.has(mod);
 
                     if (!moduleStats[mod]) { moduleStats[mod] = { runs: 0, totalMistakes: 0, totalMood: 0, moodRuns: 0 }; }
@@ -232,6 +233,9 @@
                     userStats[emailKey].totalMistakes += parseInt(log.mistakes) || 0;
                     if (isSim) { userStats[emailKey].totalMood += parseInt(log.final_mood_score) || 0; userStats[emailKey].moodRuns += 1; }
                 });
+
+                const totalActive = Object.values(moduleStats).reduce((sum, s) => sum + s.runs, 0);
+                document.getElementById('total-sims').innerText = totalActive;
 
                 let errorLabels = [], avgMistakesData = [];
                 let moodLabels = [], avgMoodData = [];
