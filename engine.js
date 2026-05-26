@@ -25,8 +25,9 @@ const sessionData = {
     choicesLog: [] 
 };
 
-let currentMood = 50; 
+let currentMood = 50;
 let scenarioData = null;
+let characterName = 'Customer';
 
 // Gamified Quiz State
 let quizState = {
@@ -63,7 +64,8 @@ async function fetchModuleFromCloud() {
         if (error) throw error;
 
         if (data && data.length > 0) {
-            scenarioData = data[0].scenario_data; 
+            scenarioData = data[0].scenario_data;
+            characterName = scenarioData._characterName || 'Customer';
             const moduleType = data[0].module_type || 'scenario'; // Default to scenario if missing
 
             chatWindow.innerHTML = ''; 
@@ -273,11 +275,11 @@ function updateMoodMeter(change) {
     if (moodBar && moodLabel) {
         moodBar.style.width = currentMood + '%';
         if (currentMood >= 70) {
-            moodBar.style.backgroundColor = '#28a745'; moodLabel.innerText = 'Customer Mood: Positive';
+            moodBar.style.backgroundColor = '#28a745'; moodLabel.innerText = `${characterName} Mood: Positive`;
         } else if (currentMood <= 35) {
-            moodBar.style.backgroundColor = '#dc3545'; moodLabel.innerText = 'Customer Mood: Negative';
+            moodBar.style.backgroundColor = '#dc3545'; moodLabel.innerText = `${characterName} Mood: Negative`;
         } else {
-            moodBar.style.backgroundColor = '#ffc107'; moodLabel.innerText = 'Customer Mood: Neutral';
+            moodBar.style.backgroundColor = '#ffc107'; moodLabel.innerText = `${characterName} Mood: Neutral`;
         }
     }
 }
@@ -285,7 +287,7 @@ function updateMoodMeter(change) {
 function initializeMoodMeter() {
     if (!document.getElementById('mood-meter-container')) {
         const meterHTML = `
-            <div id="dynamic-mood-label" style="font-size: 0.95rem; font-weight: bold; color: #555; margin-bottom: 8px; display: block;">Customer Mood: Neutral</div>
+            <div id="dynamic-mood-label" style="font-size: 0.95rem; font-weight: bold; color: #555; margin-bottom: 8px; display: block;">${characterName} Mood: Neutral</div>
             <div id="mood-meter-container" style="background: #e9ecef; height: 12px; border-radius: 6px; margin-bottom: 20px; overflow: hidden; width: 100%; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
                 <div id="dynamic-mood-bar" style="height: 100%; width: 50%; background: #ffc107; transition: width 0.5s ease-in-out, background-color 0.5s ease;"></div>
             </div>
@@ -304,7 +306,7 @@ function addMessage(text, sender) {
         messageDiv.style.borderLeft = '4px solid #4caf50';
         messageDiv.innerHTML = `<p><strong>You:</strong> ${text}</p>`;
     } else {
-        messageDiv.innerHTML = `<p><strong>Customer:</strong> ${text}</p>`;
+        messageDiv.innerHTML = `<p><strong>${characterName}:</strong> ${text}</p>`;
     }
     chatWindow.appendChild(messageDiv);
     chatWindow.scrollTop = chatWindow.scrollHeight; 

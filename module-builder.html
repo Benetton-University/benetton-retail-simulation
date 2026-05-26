@@ -86,6 +86,10 @@
         <div class="form-card" style="border-top-color: #17a2b8;">
             <h2 style="margin-bottom: 20px; color: #333;">Scenario Dialogue Builder</h2>
             <p style="color: #666; margin-bottom: 20px; font-size: 0.9rem;">The first step must always have the ID <strong>start</strong>.</p>
+            <div class="form-group">
+                <label>Character Name <span style="color:#666; font-weight:normal;">(shown in chat and mood bar — e.g., "Customer", "Floor Manager")</span></label>
+                <input type="text" id="character-name" placeholder="e.g., Customer" value="Customer">
+            </div>
             
             <div id="steps-container">
                 </div>
@@ -189,7 +193,8 @@
             }
 
             // The Magic: Compile the UI inputs into pure JSON
-            let scenarioJson = {};
+            const characterName = document.getElementById('character-name').value.trim() || 'Customer';
+            let scenarioJson = { _characterName: characterName };
             const steps = document.querySelectorAll('.step-card');
             
             steps.forEach(step => {
