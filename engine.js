@@ -247,11 +247,12 @@ async function completeQuizSimulation() {
     const { data, error } = await sbClient
         .from('training_logs')
         .insert([{
-            email: sessionData.employeeEmail, 
+            email: sessionData.employeeEmail,
             module_name: sessionData.moduleName,
             score: percentageScore,
-            final_mood_score: 50, // N/A for quizzes
-            mistakes: quizState.mistakes.toString() 
+            final_mood_score: 50,
+            mistakes: quizState.mistakes.toString(),
+            duration_seconds: Math.round((sessionData.endTime - sessionData.startTime) / 1000)
         }]);
 
     if (error) {
@@ -422,11 +423,13 @@ async function completeSimulation() {
     const { data, error } = await sbClient
         .from('training_logs')
         .insert([{
-            email: sessionData.employeeEmail, 
+            email: sessionData.employeeEmail,
             module_name: sessionData.moduleName,
             score: finalScore,
             final_mood_score: sessionData.finalMoodScore,
-            mistakes: sessionData.criticalErrors.toString() 
+            mistakes: sessionData.criticalErrors.toString(),
+            choices_log: sessionData.choicesLog,
+            duration_seconds: Math.round((sessionData.endTime - sessionData.startTime) / 1000)
         }]);
 
     if (error) {
@@ -559,6 +562,7 @@ function renderAssessmentNavigationControls(total) {
 }
 
 async function calculateAndSaveAssessmentResults() {
+    sessionData.endTime = new Date().getTime();
     removeFeedbackPanel();
     buttonGrid.innerHTML = '<p style="text-align:center; color:#666;">Evaluating score metrics with tracking databases...</p>';
 
@@ -599,11 +603,12 @@ async function calculateAndSaveAssessmentResults() {
     const { data, error } = await sbClient
         .from('training_logs')
         .insert([{
-            email: sessionData.employeeEmail, 
+            email: sessionData.employeeEmail,
             module_name: sessionData.moduleName,
             score: finalPercentage,
-            final_mood_score: 50, // Static baseline index for exams
-            mistakes: totalMistakesValue 
+            final_mood_score: 50,
+            mistakes: totalMistakesValue,
+            duration_seconds: Math.round((sessionData.endTime - sessionData.startTime) / 1000)
         }]);
 
     if (error) {
@@ -724,6 +729,7 @@ function submitPriorityAnswer() {
 }
 
 async function completePrioritySurvey() {
+    sessionData.endTime = new Date().getTime();
     chatWindow.innerHTML = `
         <div style="text-align:center; padding:50px 20px; animation: slideIn 0.3s ease-out;">
             <div style="font-size:3.5rem; margin-bottom:15px;">✅</div>
@@ -740,7 +746,8 @@ async function completePrioritySurvey() {
             module_name: sessionData.moduleName,
             score: 0,
             final_mood_score: 0,
-            mistakes: JSON.stringify(priorityState.allRankings)
+            mistakes: JSON.stringify(priorityState.allRankings),
+            duration_seconds: Math.round((sessionData.endTime - sessionData.startTime) / 1000)
         }]);
 
     if (error) {

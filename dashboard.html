@@ -148,6 +148,25 @@
                 </tbody>
             </table>
         </div>
+        <!-- Learning Progression -->
+        <div class="section-header" style="margin-top: 40px;">
+            <div>
+                <h2>Learning Progression</h2>
+                <p>Score over time per employee — spot improvement trends and repeat struggles</p>
+            </div>
+            <select id="progression-select" onchange="drawProgressionChart(this.value)"
+                style="border:1px solid #ddd; border-radius:5px; padding:6px 14px; font-size:0.88rem; color:#555; cursor:pointer; background:white; min-width:160px;">
+                <option value="">— Select Employee —</option>
+            </select>
+        </div>
+        <div class="chart-box" style="height: 420px; margin-bottom: 40px;">
+            <p id="progression-placeholder" style="text-align:center; color:#aaa; padding: 80px 20px; font-style:italic; font-size:0.95rem;">
+                Select an employee above to view their score progression by module.
+            </p>
+            <div id="progression-canvas-wrap" style="display:none; position:relative; height:370px; width:100%;">
+                <canvas id="progressionChart"></canvas>
+            </div>
+        </div>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -186,6 +205,9 @@
         // ==========================================
         let employeeRows = [];
         let currentSort = 'name';
+        let progressionData = {};
+        let progressionChart = null;
+        const chartColors = ['#00563f','#2196f3','#ff5722','#9c27b0','#ff9800','#009688','#e91e63','#607d8b'];
 
         async function fetchAnalytics() {
             try {
@@ -205,11 +227,13 @@
                 const nonSimTypes = new Set(['quiz', 'assessment', 'priority']);
                 const activeModules = new Set();
                 const simModules = new Set();
+                const priorityModules = new Set();
                 const { data: mods, error: modsError } = await db.from('module_content').select('module_name, module_type');
                 if (mods) {
                     mods.forEach(m => {
                         activeModules.add(m.module_name);
                         if (!nonSimTypes.has(m.module_type)) simModules.add(m.module_name);
+                        if (m.module_type === 'priority') priorityModules.add(m.module_name);
                     });
                 }
                 if (modsError) console.error('module_content fetch error:', modsError);
@@ -281,7 +305,25 @@
                     avgMood: s.moodRuns > 0 ? Math.round(s.totalMood / s.moodRuns) : null
                 }));
 
+                // Build progression data: email -> module -> [{date, score}] sorted by date
+                progressionData = {};
+                [...data]
+                    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+                    .forEach(log => {
+                        const mod = log.module_name || 'Unknown Module';
+                        if (activeModules.size > 0 && !activeModules.has(mod)) return;
+                        if (priorityModules.has(mod)) return;
+                        const emailKey = (log.email || 'unknown').toLowerCase();
+                        if (!progressionData[emailKey]) progressionData[emailKey] = {};
+                        if (!progressionData[emailKey][mod]) progressionData[emailKey][mod] = [];
+                        progressionData[emailKey][mod].push({
+                            date: log.created_at,
+                            score: parseInt(log.score) || 0
+                        });
+                    });
+
                 renderEmployeeTable();
+                populateProgressionDropdown();
             } catch (err) {
                 console.error('fetchAnalytics error:', err);
                 document.getElementById('risk-module').innerText = "Database Error";
@@ -332,6 +374,97 @@
                         <td>${moodCell}</td>
                     </tr>`;
             }).join('');
+        }
+
+        function populateProgressionDropdown() {
+            const sel = document.getElementById('progression-select');
+            sel.innerHTML = '<option value="">— Select Employee —</option>';
+            [...employeeRows]
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .forEach(row => {
+                    const opt = document.createElement('option');
+                    opt.value = row.email;
+                    opt.textContent = row.name;
+                    sel.appendChild(opt);
+                });
+        }
+
+        function drawProgressionChart(email) {
+            const placeholder = document.getElementById('progression-placeholder');
+            const canvasWrap = document.getElementById('progression-canvas-wrap');
+
+            if (!email || !progressionData[email]) {
+                placeholder.style.display = 'block';
+                canvasWrap.style.display = 'none';
+                if (progressionChart) { progressionChart.destroy(); progressionChart = null; }
+                return;
+            }
+
+            const modules = progressionData[email];
+            const moduleNames = Object.keys(modules);
+
+            if (moduleNames.length === 0) {
+                placeholder.textContent = 'No progression data for this employee yet.';
+                placeholder.style.display = 'block';
+                canvasWrap.style.display = 'none';
+                return;
+            }
+
+            placeholder.style.display = 'none';
+            canvasWrap.style.display = 'block';
+
+            if (progressionChart) { progressionChart.destroy(); progressionChart = null; }
+
+            const datasets = moduleNames.map((mod, i) => {
+                const color = chartColors[i % chartColors.length];
+                return {
+                    label: mod,
+                    data: modules[mod].map((a, idx) => ({ x: idx + 1, y: a.score, date: a.date })),
+                    borderColor: color,
+                    backgroundColor: color + '22',
+                    borderWidth: 2.5,
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    tension: 0.3,
+                    fill: false
+                };
+            });
+
+            progressionChart = new Chart(document.getElementById('progressionChart'), {
+                type: 'line',
+                data: { datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: { display: true, text: 'Attempt #', color: '#888', font: { size: 12 } },
+                            min: 1,
+                            ticks: { stepSize: 1, precision: 0 }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: { display: true, text: 'Score (%)', color: '#888', font: { size: 12 } },
+                            ticks: { callback: v => v + '%' }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                title: ctx => {
+                                    const d = ctx[0].raw.date;
+                                    const formatted = d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+                                    return `Attempt ${ctx[0].parsed.x}${formatted ? '  ·  ' + formatted : ''}`;
+                                },
+                                label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}%`
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         function drawCharts(errorLabels, errorsData, moodLabels, moodData) {
