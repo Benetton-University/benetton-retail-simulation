@@ -639,7 +639,8 @@ function loadPriorityQuestion() {
     const n = q.options.length;
 
     const situationCard = q.imageUrl ? `
-        <div style="position:relative; border-radius:12px; overflow:hidden; margin-bottom:20px; min-height:260px;
+        <div style="position:relative; border-radius:12px; overflow:hidden; margin-bottom:20px;
+                    aspect-ratio:16/9; width:100%;
                     background-image:url('${q.imageUrl}'); background-size:cover; background-position:center;">
             <div style="position:absolute; inset:0; background:linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.72) 100%);"></div>
             <div style="position:absolute; bottom:0; left:0; right:0; padding:24px 20px;">
