@@ -143,21 +143,17 @@ async function showLoggedInView(email) {
             document.getElementById('logged-out-view').style.display = 'none';
             document.getElementById('logged-in-view').style.display = 'block';
 
-            // Safe assignment for your new greeting banner layout
             const nameDisplay = document.getElementById('user-name-display') || document.getElementById('user-email-display');
-            if (nameDisplay) {
-                nameDisplay.textContent = email.split('@')[0]; // Quick default
-            }
+            if (nameDisplay) nameDisplay.textContent = email.split('@')[0]; // fallback while loading
 
             if (document.getElementById('admin-controls')) {
                 document.getElementById('admin-controls').style.display = 'none';
             }
 
-            // PERF OPTIMIZATION: Kick off the course grid loader IMMEDIATELY.
-            // Do not make the curriculum cards wait for the admin check!
-            loadDynamicCourses(); 
+            // Kick off course grid immediately — don't wait for name/role
+            loadDynamicCourses();
 
-            // Apply cached role instantly, then verify in background
+            // Apply cached name + role instantly if fresh
             const ROLE_CACHE_KEY = `benetton_role_${email}`;
             try {
                 const cachedRole = JSON.parse(localStorage.getItem(ROLE_CACHE_KEY));
@@ -169,18 +165,29 @@ async function showLoggedInView(email) {
                 }
             } catch(e) {}
 
-            const { data, error } = await supabaseClient
-                .from('user_roles')
-                .select('*')
-                .eq('email', email)
-                .single();
+            // Fetch name from CSV (source of truth) and role from DB in parallel
+            const [csvText, { data }] = await Promise.all([
+                fetch('employees.csv').then(r => r.text()).catch(() => ''),
+                supabaseClient.from('user_roles').select('role').eq('email', email).single()
+            ]);
+
+            let displayName = email.split('@')[0];
+            if (csvText) {
+                csvText.trim().split('\n').slice(1).forEach(line => {
+                    const [name, csvEmail] = line.split(',');
+                    if (csvEmail && csvEmail.trim().toLowerCase() === email.toLowerCase()) {
+                        displayName = name.trim();
+                    }
+                });
+            }
+
+            if (nameDisplay) nameDisplay.textContent = displayName;
 
             if (data) {
-                if (nameDisplay) nameDisplay.textContent = data.Name || data.name || email.split('@')[0];
                 if (data.role === 'admin' && document.getElementById('admin-controls')) {
                     document.getElementById('admin-controls').style.display = 'block';
                 }
-                try { localStorage.setItem(ROLE_CACHE_KEY, JSON.stringify({ name: data.Name || data.name, role: data.role, ts: Date.now() })); } catch(e) {}
+                try { localStorage.setItem(ROLE_CACHE_KEY, JSON.stringify({ name: displayName, role: data.role, ts: Date.now() })); } catch(e) {}
             }
         }
 
