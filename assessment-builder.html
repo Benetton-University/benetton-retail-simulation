@@ -97,8 +97,9 @@
         const sbClient = window.supabase.createClient(dbUrl, dbKey);
 
         let questionCount = 0;
+        let editingModuleId = null;
 
-        function addQuestionCard() {
+        function addQuestionCard(prefillData = null) {
             questionCount++;
             const qId = questionCount;
             const cardHTML = `
@@ -130,6 +131,44 @@
                 </div>
             `;
             document.getElementById('questions-container').insertAdjacentHTML('beforeend', cardHTML);
+
+            if (prefillData) {
+                const card = document.getElementById(`q-card-${qId}`);
+                card.querySelector('.q-text').value = prefillData.question || '';
+                const optInputs = card.querySelectorAll('.q-opt');
+                (prefillData.options || []).forEach((opt, i) => {
+                    if (optInputs[i]) optInputs[i].value = opt;
+                });
+                const radios = card.querySelectorAll('input[type="radio"]');
+                if (radios[prefillData.correctIndex]) radios[prefillData.correctIndex].checked = true;
+            }
+        }
+
+        async function loadAssessmentForEdit(id) {
+            editingModuleId = parseInt(id);
+            document.querySelector('h2').innerText = 'Edit Assessment';
+            document.querySelector('.btn-primary').innerText = 'Save Changes';
+
+            const { data, error } = await sbClient
+                .from('module_content')
+                .select('module_name, description, tags, scenario_data')
+                .eq('id', editingModuleId)
+                .single();
+
+            if (error || !data) {
+                alert('Failed to load assessment for editing.');
+                window.location.href = 'manage-modules.html';
+                return;
+            }
+
+            document.getElementById('assess-title').value = data.module_name || '';
+            document.getElementById('assess-desc').value = data.description || '';
+            document.getElementById('assess-tags').value = data.tags || '';
+            if (data.scenario_data?.passingScore !== undefined) {
+                document.getElementById('assess-pass-mark').value = data.scenario_data.passingScore;
+            }
+
+            (data.scenario_data?.questions || []).forEach(q => addQuestionCard(q));
         }
 
         async function publishAssessment() {
@@ -166,27 +205,39 @@
             btn.innerText = "Publishing to Cloud...";
             btn.disabled = true;
 
-            const { error } = await sbClient
-                .from('module_content')
-                .insert([{
-                    module_name: title,
-                    description: desc,
-                    tags: tags,
-                    scenario_data: compiledData,
-                    module_type: 'assessment'
-                }]);
+            let dbError;
+            if (editingModuleId) {
+                const { error } = await sbClient
+                    .from('module_content')
+                    .update({ module_name: title, description: desc, tags: tags, scenario_data: compiledData })
+                    .eq('id', editingModuleId);
+                dbError = error;
+            } else {
+                const { error } = await sbClient
+                    .from('module_content')
+                    .insert([{ module_name: title, description: desc, tags: tags, scenario_data: compiledData, module_type: 'assessment' }]);
+                dbError = error;
+            }
 
-            if (error) {
-                alert("Cloud write failure: " + error.message);
-                btn.innerText = "Publish Assessment";
+            if (dbError) {
+                alert("Cloud write failure: " + dbError.message);
+                btn.innerText = editingModuleId ? "Save Changes" : "Publish Assessment";
                 btn.disabled = false;
             } else {
-                alert("Assessment Saved and Deployed Successfully!");
+                alert(editingModuleId ? "Assessment updated successfully!" : "Assessment Saved and Deployed Successfully!");
                 window.location.href = "manage-modules.html";
             }
         }
 
-        window.onload = addQuestionCard;
+        window.onload = async () => {
+            const params = new URLSearchParams(window.location.search);
+            const editId = params.get('edit');
+            if (editId) {
+                await loadAssessmentForEdit(editId);
+            } else {
+                addQuestionCard();
+            }
+        };
 
         // Navigation Toggle Logic
         const menuToggle = document.getElementById('menu-toggle');

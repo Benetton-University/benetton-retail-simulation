@@ -111,11 +111,12 @@
         const supabaseClient = window.supabase.createClient(dbUrl, dbKey);
 
         let stepCount = 0;
+        let editingModuleId = null;
 
         // --- 2. DYNAMIC UI FUNCTIONS ---
-        function addStep(isStart = false) {
+        function addStep(isStart = false, stepIdOverride = null, prefillData = null) {
             stepCount++;
-            const stepIdVal = isStart ? 'start' : `step_${stepCount}`;
+            const stepIdVal = stepIdOverride || (isStart ? 'start' : `step_${stepCount}`);
             
             const stepHtml = `
                 <div class="step-card" id="step-node-${stepCount}">
@@ -137,9 +138,17 @@
                 </div>
             `;
             document.getElementById('steps-container').insertAdjacentHTML('beforeend', stepHtml);
+
+            if (prefillData) {
+                const stepCard = document.getElementById(`step-node-${stepCount}`);
+                stepCard.querySelector('.customer-text').value = prefillData.customerText || '';
+                (prefillData.options || []).forEach(opt => {
+                    addOption(stepCard.querySelector('.add-btn'), opt);
+                });
+            }
         }
 
-        function addOption(btnElement) {
+        function addOption(btnElement, prefillData = null) {
             const optionsContainer = btnElement.previousElementSibling;
             const optionHtml = `
                 <div class="option-card">
@@ -171,10 +180,60 @@
                 </div>
             `;
             optionsContainer.insertAdjacentHTML('beforeend', optionHtml);
+
+            if (prefillData) {
+                const newCard = optionsContainer.lastElementChild;
+                newCard.querySelector('.opt-text').value = prefillData.text || '';
+                newCard.querySelector('.opt-next').value = prefillData.nextStep || '';
+                newCard.querySelector('.opt-mood').value = prefillData.moodChange !== undefined ? prefillData.moodChange : 0;
+                newCard.querySelector('.opt-optimal').checked = prefillData.isOptimal || false;
+                newCard.querySelector('.opt-feedback').value = prefillData.feedback || '';
+            }
+        }
+
+        // --- EDIT MODE LOADER ---
+        async function loadModuleForEdit(id) {
+            editingModuleId = parseInt(id);
+            document.querySelector('.header h1').innerText = 'Edit Module';
+            document.querySelector('.header p').innerText = 'Update and republish this training scenario.';
+            document.querySelector('.submit-btn').innerText = 'Save Changes';
+
+            const { data, error } = await supabaseClient
+                .from('module_content')
+                .select('module_name, description, tags, scenario_data')
+                .eq('id', editingModuleId)
+                .single();
+
+            if (error || !data) {
+                alert('Failed to load module for editing.');
+                window.location.href = 'manage-modules.html';
+                return;
+            }
+
+            document.getElementById('module-name').value = data.module_name || '';
+            document.getElementById('module-description').value = data.description || '';
+            document.getElementById('module-tags').value = data.tags || '';
+
+            const scenario = data.scenario_data || {};
+            document.getElementById('character-name').value = scenario._characterName || 'Customer';
+
+            const stepKeys = Object.keys(scenario).filter(k => k !== '_characterName');
+            const orderedKeys = ['start', ...stepKeys.filter(k => k !== 'start')];
+            orderedKeys.forEach(key => {
+                if (scenario[key]) addStep(key === 'start', key, scenario[key]);
+            });
         }
 
         // Initialize the first required 'start' step when page loads
-        window.onload = () => addStep(true);
+        window.onload = async () => {
+            const params = new URLSearchParams(window.location.search);
+            const editId = params.get('edit');
+            if (editId) {
+                await loadModuleForEdit(editId);
+            } else {
+                addStep(true);
+            }
+        };
 
         // --- 3. JSON COMPILER & PUBLISHER ---
         async function publishModule() {
@@ -231,26 +290,27 @@
             statusBox.innerText = '⏳ Compiling data and publishing to cloud...';
 
             try {
-                const { data, error } = await supabaseClient
-                    .from('module_content')
-                    .insert([{ 
-                        module_name: name, 
-                        description: desc, 
-                        tags: tags, 
-                        scenario_data: scenarioJson 
-                    }]);
-
-                if (error) throw error;
-
-                statusBox.style.backgroundColor = '#d4edda';
-                statusBox.style.color = '#155724';
-                statusBox.innerText = '✅ Success! Module built and published.';
-                
-                // Clear the metadata
-                document.getElementById('module-name').value = '';
-                document.getElementById('module-description').value = '';
-                document.getElementById('module-tags').value = '';
-                
+                if (editingModuleId) {
+                    const { error } = await supabaseClient
+                        .from('module_content')
+                        .update({ module_name: name, description: desc, tags: tags, scenario_data: scenarioJson })
+                        .eq('id', editingModuleId);
+                    if (error) throw error;
+                    statusBox.style.backgroundColor = '#d4edda';
+                    statusBox.style.color = '#155724';
+                    statusBox.innerText = '✅ Changes saved successfully!';
+                } else {
+                    const { error } = await supabaseClient
+                        .from('module_content')
+                        .insert([{ module_name: name, description: desc, tags: tags, scenario_data: scenarioJson }]);
+                    if (error) throw error;
+                    statusBox.style.backgroundColor = '#d4edda';
+                    statusBox.style.color = '#155724';
+                    statusBox.innerText = '✅ Success! Module built and published.';
+                    document.getElementById('module-name').value = '';
+                    document.getElementById('module-description').value = '';
+                    document.getElementById('module-tags').value = '';
+                }
             } catch (error) {
                 statusBox.style.backgroundColor = '#f8d7da';
                 statusBox.style.color = '#721c24';

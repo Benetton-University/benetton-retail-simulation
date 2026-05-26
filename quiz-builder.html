@@ -87,8 +87,9 @@
         const sbClient = window.supabase.createClient(dbUrl, dbKey);
 
         let questionCount = 0;
+        let editingModuleId = null;
 
-        function addQuestionCard() {
+        function addQuestionCard(prefillData = null) {
             questionCount++;
             const qId = questionCount;
             const cardHTML = `
@@ -124,6 +125,42 @@
                 </div>
             `;
             document.getElementById('questions-container').insertAdjacentHTML('beforeend', cardHTML);
+
+            if (prefillData) {
+                const card = document.getElementById(`q-card-${qId}`);
+                card.querySelector('.q-text').value = prefillData.question || '';
+                const optInputs = card.querySelectorAll('.q-opt');
+                (prefillData.options || []).forEach((opt, i) => {
+                    if (optInputs[i]) optInputs[i].value = opt;
+                });
+                const radios = card.querySelectorAll('input[type="radio"]');
+                if (radios[prefillData.correctIndex]) radios[prefillData.correctIndex].checked = true;
+                if (card.querySelector('.q-feedback')) card.querySelector('.q-feedback').value = prefillData.feedback || '';
+            }
+        }
+
+        async function loadQuizForEdit(id) {
+            editingModuleId = parseInt(id);
+            document.querySelector('h2').innerText = 'Edit Quiz';
+            document.querySelector('.btn-primary').innerText = 'Save Changes';
+
+            const { data, error } = await sbClient
+                .from('module_content')
+                .select('module_name, description, tags, scenario_data')
+                .eq('id', editingModuleId)
+                .single();
+
+            if (error || !data) {
+                alert('Failed to load quiz for editing.');
+                window.location.href = 'manage-modules.html';
+                return;
+            }
+
+            document.getElementById('quiz-title').value = data.module_name || '';
+            document.getElementById('quiz-desc').value = data.description || '';
+            document.getElementById('quiz-tags').value = data.tags || '';
+
+            (data.scenario_data?.questions || []).forEach(q => addQuestionCard(q));
         }
 
         async function publishQuiz() {
@@ -161,27 +198,39 @@
             btn.innerText = "Saving to Database...";
             btn.disabled = true;
 
-            const { error } = await sbClient
-                .from('module_content')
-                .insert([{
-                    module_name: title,
-                    description: desc,
-                    tags: tags,
-                    scenario_data: quizData,
-                    module_type: 'quiz'
-                }]);
+            let dbError;
+            if (editingModuleId) {
+                const { error } = await sbClient
+                    .from('module_content')
+                    .update({ module_name: title, description: desc, tags: tags, scenario_data: quizData })
+                    .eq('id', editingModuleId);
+                dbError = error;
+            } else {
+                const { error } = await sbClient
+                    .from('module_content')
+                    .insert([{ module_name: title, description: desc, tags: tags, scenario_data: quizData, module_type: 'quiz' }]);
+                dbError = error;
+            }
 
-            if (error) {
-                alert("Error saving quiz: " + error.message);
-                btn.innerText = "Publish Quiz";
+            if (dbError) {
+                alert("Error saving quiz: " + dbError.message);
+                btn.innerText = editingModuleId ? "Save Changes" : "Publish Quiz";
                 btn.disabled = false;
             } else {
-                alert("Quiz Published Successfully!");
+                alert(editingModuleId ? "Quiz updated successfully!" : "Quiz Published Successfully!");
                 window.location.href = "manage-modules.html";
             }
         }
 
-        window.onload = addQuestionCard;
+        window.onload = async () => {
+            const params = new URLSearchParams(window.location.search);
+            const editId = params.get('edit');
+            if (editId) {
+                await loadQuizForEdit(editId);
+            } else {
+                addQuestionCard();
+            }
+        };
 
         // FIXED: Sidebar toggle controls added here
         const menuToggle = document.getElementById('menu-toggle');

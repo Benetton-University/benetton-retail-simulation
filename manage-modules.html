@@ -158,7 +158,7 @@
 
             const { data, error } = await supabaseClient
                 .from('module_content')
-                .select('id, module_name, created_at')
+                .select('id, module_name, module_type, created_at')
                 .order('created_at', { ascending: false });
 
             if (error) {
@@ -178,7 +178,7 @@
                 let actionButtons = '';
                 if (isAdmin) {
                     actionButtons = `
-                        <button class="action-btn edit-btn" onclick="alert('Edit feature coming soon!')">Edit</button>
+                        <button class="action-btn edit-btn" onclick="editModule(${mod.id}, '${mod.module_type || 'scenario'}')">Edit</button>
                         <button class="action-btn delete-btn" onclick="deleteModule(${mod.id}, '${mod.module_name}')">Delete</button>
                     `;
                 } else {
@@ -194,6 +194,16 @@
                 `;
                 tableBody.insertAdjacentHTML('beforeend', row);
             });
+        }
+
+        function editModule(id, type) {
+            if (type === 'quiz') {
+                window.location.href = `quiz-builder.html?edit=${id}`;
+            } else if (type === 'assessment') {
+                window.location.href = `assessment-builder.html?edit=${id}`;
+            } else {
+                window.location.href = `module-builder.html?edit=${id}`;
+            }
         }
 
         async function deleteModule(moduleId, moduleName) {
