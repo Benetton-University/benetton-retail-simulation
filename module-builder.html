@@ -157,6 +157,10 @@
                         <input type="text" class="step-id" value="${stepIdVal}" ${isStart ? 'readonly' : ''} placeholder="e.g., shoeResponse">
                     </div>
                     <div class="form-group">
+                        <label>Scene Image URL <span style="color:#888; font-weight:normal;">(optional — shown above the dialogue in the simulation)</span></label>
+                        <input type="text" class="step-image-url" placeholder="https://... leave blank if no image">
+                    </div>
+                    <div class="form-group">
                         <label>Customer/Manager Dialogue Text</label>
                         <textarea class="customer-text" rows="2" placeholder="What does the customer say?"></textarea>
                     </div>
@@ -169,6 +173,7 @@
 
             if (prefillData) {
                 const stepCard = document.getElementById(`step-node-${stepCount}`);
+                stepCard.querySelector('.step-image-url').value = prefillData.imageUrl || '';
                 stepCard.querySelector('.customer-text').value = prefillData.customerText || '';
                 (prefillData.options || []).forEach(opt => {
                     addOption(stepCard.querySelector('.add-btn'), opt);
@@ -309,7 +314,10 @@
                         });
                     });
                     if (stepId && customerText) {
-                        scenarioObj[stepId] = { customerText, options: optionsArray };
+                        const imageUrl = step.querySelector('.step-image-url').value.trim();
+                        const stepObj = { customerText, options: optionsArray };
+                        if (imageUrl) stepObj.imageUrl = imageUrl;
+                        scenarioObj[stepId] = stepObj;
                     }
                 });
                 scenarios.push(scenarioObj);

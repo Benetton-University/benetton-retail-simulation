@@ -395,9 +395,17 @@ function removeFeedbackPanel() {
 
 function loadStep(stepId) {
     if (stepId === 'start') initializeMoodMeter();
-    
-    const stepData = scenarioData[stepId]; 
-    
+
+    const stepData = scenarioData[stepId];
+
+    if (stepData.imageUrl) {
+        const imgDiv = document.createElement('div');
+        imgDiv.style.cssText = 'border-radius:8px; overflow:hidden; margin-bottom:12px; width:100%;';
+        imgDiv.innerHTML = `<img src="${stepData.imageUrl}" alt="" style="width:100%; max-height:260px; object-fit:cover; display:block; border-radius:8px;">`;
+        chatWindow.appendChild(imgDiv);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
     addMessage(stepData.customerText, 'customer');
     buttonGrid.innerHTML = ''; 
     buttonGrid.style.gridTemplateColumns = '1fr'; // Ensure scenarios stay full width
