@@ -112,6 +112,10 @@ function loadQuizQuestion() {
     const q = scenarioData.questions[quizState.currentIndex];
     const total = scenarioData.questions.length;
 
+    const quizImgHtml = q.imageUrl
+        ? `<img src="${q.imageUrl}" alt="" style="max-width:100%; max-height:220px; object-fit:cover; border-radius:10px; margin-bottom:20px; display:block;">`
+        : '';
+
     // Render Gamified Header and Question
     chatWindow.innerHTML = `
         <div style="padding: 10px; text-align: center; animation: slideIn 0.3s ease-out;">
@@ -120,6 +124,7 @@ function loadQuizQuestion() {
                 <span style="color: #ff5722; font-size: 1.2rem; font-weight: 800;">🔥 Streak x${quizState.streak}</span>
                 <span style="color: #00563f; font-size: 1.2rem; font-weight: 800;">🏆 ${quizState.score}</span>
             </div>
+            ${quizImgHtml}
             <h2 style="color: #333; line-height: 1.5; font-size: 1.6rem; margin-bottom: 20px;">${q.question}</h2>
         </div>
     `;
@@ -474,6 +479,10 @@ function loadAssessmentQuestion() {
     const total = scenarioData.questions.length;
     const currentSavedAnswer = assessState.userAnswers[assessState.currentIndex];
 
+    const assessImgHtml = q.imageUrl
+        ? `<img src="${q.imageUrl}" alt="" style="max-width:100%; max-height:220px; object-fit:cover; border-radius:10px; margin-bottom:20px; display:block;">`
+        : '';
+
     // Render Clean Exam UI Structure Header
     chatWindow.innerHTML = `
         <div style="padding: 10px; animation: slideIn 0.2s ease-out;">
@@ -481,6 +490,7 @@ function loadAssessmentQuestion() {
                 <span>📋 COMPLIANCE EVALUATION</span>
                 <span>QUESTION ${assessState.currentIndex + 1} OF ${total}</span>
             </div>
+            ${assessImgHtml}
             <h2 style="color: #212529; line-height: 1.4; font-size: 1.5rem; margin-bottom: 25px;">${q.question}</h2>
         </div>
     `;

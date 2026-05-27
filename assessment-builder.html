@@ -101,6 +101,30 @@
         let questionCount = 0;
         let editingModuleId = null;
 
+        function previewImage(input, qId) {
+            if (!input.files || !input.files[0]) return;
+            const reader = new FileReader();
+            reader.onload = e => { document.querySelector(`#q-card-${qId} .q-image-url`).value = ''; showImagePreview(qId, e.target.result); };
+            reader.readAsDataURL(input.files[0]);
+        }
+        function showImagePreview(qId, src) {
+            document.getElementById(`img-preview-el-${qId}`).src = src;
+            document.getElementById(`img-preview-${qId}`).style.display = 'block';
+        }
+        function clearImage(qId) {
+            document.querySelector(`#q-card-${qId} .q-image-file`).value = '';
+            document.querySelector(`#q-card-${qId} .q-image-url`).value = '';
+            document.getElementById(`img-preview-${qId}`).style.display = 'none';
+            document.getElementById(`img-preview-el-${qId}`).src = '';
+        }
+        function getImageForCard(qId) {
+            const url = document.querySelector(`#q-card-${qId} .q-image-url`).value.trim();
+            if (url) return url;
+            const el = document.getElementById(`img-preview-el-${qId}`);
+            if (el && el.src && el.src !== window.location.href) return el.src;
+            return '';
+        }
+
         function addQuestionCard(prefillData = null) {
             questionCount++;
             const qId = questionCount;
@@ -110,6 +134,15 @@
                     <div class="form-group" style="margin-bottom: 15px;">
                         <label>Question ${qId}</label>
                         <input type="text" class="form-control q-text" placeholder="Enter formal evaluation question...">
+                    </div>
+                    <div class="form-group" style="margin-bottom:15px;">
+                        <label>Question Image <span style="font-weight:normal; color:#888;">(optional — shown above the question)</span></label>
+                        <input type="file" accept="image/*" class="q-image-file" style="display:block; margin-bottom:8px;" onchange="previewImage(this, ${qId})">
+                        <input type="text" class="form-control q-image-url" placeholder="Or paste an image URL (https://...)">
+                        <div id="img-preview-${qId}" style="margin-top:8px; display:none;">
+                            <img id="img-preview-el-${qId}" src="" alt="preview" style="max-width:100%; max-height:150px; border-radius:8px; object-fit:cover; border:1px solid #ddd;">
+                            <button type="button" onclick="clearImage(${qId})" style="display:block; margin-top:5px; background:none; border:none; color:#dc3545; cursor:pointer; font-size:0.85rem; font-weight:bold;">✕ Remove image</button>
+                        </div>
                     </div>
                     <p style="font-size: 0.85rem; color: #666; margin-bottom: 5px;">Set option fields and select the correct answer row marker.</p>
                     <div class="options-grid">
@@ -137,6 +170,7 @@
             if (prefillData) {
                 const card = document.getElementById(`q-card-${qId}`);
                 card.querySelector('.q-text').value = prefillData.question || '';
+                if (prefillData.imageUrl) { card.querySelector('.q-image-url').value = prefillData.imageUrl; showImagePreview(qId, prefillData.imageUrl); }
                 const optInputs = card.querySelectorAll('.q-opt');
                 (prefillData.options || []).forEach((opt, i) => {
                     if (optInputs[i]) optInputs[i].value = opt;
@@ -194,11 +228,11 @@
 
                 if (!qText || options.some(opt => opt === "")) validationFailed = true;
 
-                compiledData.questions.push({
-                    question: qText,
-                    options: options,
-                    correctIndex: parseInt(correctRadio.value)
-                });
+                const qCardId = card.id.replace('q-card-', '');
+                const imageUrl = getImageForCard(qCardId);
+                const questionObj = { question: qText, options, correctIndex: parseInt(correctRadio.value) };
+                if (imageUrl) questionObj.imageUrl = imageUrl;
+                compiledData.questions.push(questionObj);
             });
 
             if (validationFailed) return alert("Ensure all structural fields are completed before publishing.");
