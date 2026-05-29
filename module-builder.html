@@ -120,6 +120,13 @@
             </div>
         </div>
 
+        <div class="form-card" style="border-top-color: #6f42c1;">
+            <h2 style="margin-bottom: 8px; color: #333;">Universal Priority Questions</h2>
+            <p style="color: #666; margin-bottom: 20px; font-size: 0.9rem;">These ranking questions appear for <strong>every learner</strong> after they finish their scenario — regardless of which of the 3 variants they receive. Leave empty if not needed.</p>
+            <div id="universal-priority-container"></div>
+            <button class="add-btn" type="button" onclick="addUniversalPriorityCard()">➕ Add Priority Question</button>
+        </div>
+
         <button class="submit-btn" onclick="publishModule()">Publish Module to Cloud</button>
         <div id="status-message"></div>
     </main>
@@ -308,6 +315,49 @@
             if (value) row.querySelector('.priority-option-text').value = value;
         }
 
+        // --- UNIVERSAL PRIORITY QUESTION HELPERS ---
+        let universalPriorityCount = 0;
+
+        function addUniversalPriorityCard(prefillData = null) {
+            universalPriorityCount++;
+            const uid = universalPriorityCount;
+            const card = document.createElement('div');
+            card.className = 'step-card';
+            card.id = `upq-card-${uid}`;
+            card.style.borderLeftColor = '#6f42c1';
+            card.innerHTML = `
+                <div class="step-header" style="color:#6f42c1;">
+                    <span>Priority Question ${uid}</span>
+                    <button class="remove-btn" onclick="this.closest('.step-card').remove()">Remove</button>
+                </div>
+                <div class="form-group">
+                    <label>Situation Text</label>
+                    <textarea class="upq-situation" rows="2" placeholder="Describe the situation the employee must prioritise..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Actions to Rank</label>
+                    <p style="font-size:0.82rem; color:#888; margin-bottom:8px; font-weight:normal;">Employees rank these in order. No right or wrong answer — responses feed the dashboard heatmap.</p>
+                    <div class="upq-options-list"></div>
+                    <button class="add-btn" type="button" onclick="addUniversalPriorityOption(this.previousElementSibling)">➕ Add Action</button>
+                </div>
+            `;
+            document.getElementById('universal-priority-container').appendChild(card);
+
+            if (prefillData) {
+                card.querySelector('.upq-situation').value = prefillData.situationText || '';
+                const list = card.querySelector('.upq-options-list');
+                (prefillData.options || []).forEach(opt => addUniversalPriorityOption(list, opt));
+            }
+        }
+
+        function addUniversalPriorityOption(list, value = '') {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex; align-items:center; gap:8px; margin-bottom:8px;';
+            row.innerHTML = `<input type="text" class="upq-option-text" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:4px; font-size:0.9rem;" placeholder="e.g., Greet the customer first"><button type="button" onclick="this.parentElement.remove()" style="background:#dc3545; color:white; border:none; padding:5px 8px; border-radius:4px; cursor:pointer; font-size:0.8rem;">✕</button>`;
+            list.appendChild(row);
+            if (value) row.querySelector('.upq-option-text').value = value;
+        }
+
         // --- EDIT MODE LOADER ---
         async function loadModuleForEdit(id) {
             editingModuleId = parseInt(id);
@@ -333,6 +383,10 @@
 
             const raw = data.scenario_data || {};
             document.getElementById('character-name').value = raw._characterName || 'Customer';
+
+            if (Array.isArray(raw.prioritySteps)) {
+                raw.prioritySteps.forEach(q => addUniversalPriorityCard(q));
+            }
 
             if (raw.scenarios && Array.isArray(raw.scenarios)) {
                 // New multi-scenario format
@@ -429,7 +483,15 @@
                 }
             }
 
+            const prioritySteps = [];
+            document.querySelectorAll('#universal-priority-container .step-card').forEach(card => {
+                const situationText = card.querySelector('.upq-situation').value.trim();
+                const options = Array.from(card.querySelectorAll('.upq-option-text')).map(i => i.value.trim()).filter(v => v);
+                if (situationText && options.length > 0) prioritySteps.push({ situationText, options });
+            });
+
             const scenarioJson = { _characterName: characterName, scenarios };
+            if (prioritySteps.length > 0) scenarioJson.prioritySteps = prioritySteps;
 
             statusBox.style.backgroundColor = '#cce5ff';
             statusBox.style.color = '#004085';

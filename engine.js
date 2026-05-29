@@ -28,6 +28,7 @@ const sessionData = {
 let currentMood = 50;
 let scenarioData = null;
 let characterName = 'Customer';
+let pendingPrioritySteps = [];
 
 // Gamified Quiz State
 let quizState = {
@@ -67,6 +68,7 @@ async function fetchModuleFromCloud() {
             scenarioData = data[0].scenario_data;
             characterName = scenarioData._characterName || 'Customer';
             if (scenarioData.scenarios && Array.isArray(scenarioData.scenarios) && scenarioData.scenarios.length > 0) {
+                pendingPrioritySteps = Array.isArray(scenarioData.prioritySteps) ? [...scenarioData.prioritySteps] : [];
                 const randomIndex = Math.floor(Math.random() * scenarioData.scenarios.length);
                 scenarioData = scenarioData.scenarios[randomIndex];
             }
@@ -365,10 +367,10 @@ function showFeedbackPanel(selectedOption) {
     actionBtn.className = 'continue-btn';
     
     if (selectedOption.nextStep === 'endModule') {
-        actionBtn.innerText = 'Finish Simulation ✔';
-        actionBtn.onclick = () => { 
-            removeFeedbackPanel(); 
-            completeSimulation(); 
+        actionBtn.innerText = pendingPrioritySteps.length > 0 ? 'Continue →' : 'Finish Simulation ✔';
+        actionBtn.onclick = () => {
+            removeFeedbackPanel();
+            advanceOrComplete();
         };
     } else {
         actionBtn.innerText = 'Continue ➔';
@@ -453,7 +455,7 @@ function loadPriorityStep(stepId, stepData) {
     buttonGrid.appendChild(submitBtn);
 }
 
-function submitEmbeddedPriority(stepId, stepData, n) {
+function submitEmbeddedPriority(stepId, stepData, n, nextFn = null) {
     const rankings = [];
     const used = new Set();
 
@@ -495,7 +497,50 @@ function submitEmbeddedPriority(stepId, stepData, n) {
 
     buttonGrid.innerHTML = '';
     removeFeedbackPanel();
-    loadStep(stepData.nextStep);
+    if (nextFn) { nextFn(); } else { loadStep(stepData.nextStep); }
+}
+
+function advanceOrComplete() {
+    if (pendingPrioritySteps.length > 0) {
+        loadUniversalPriorityStep(pendingPrioritySteps.shift());
+    } else {
+        completeSimulation();
+    }
+}
+
+function loadUniversalPriorityStep(stepData) {
+    const n = stepData.options.length;
+
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'message customer-message';
+    msgDiv.innerHTML = `
+        <p style="font-weight:bold; margin-bottom:6px;">Situation</p>
+        <p style="margin-bottom:10px;">${stepData.situationText}</p>
+        <p style="font-size:0.88rem; color:#666;">Rank each action from <strong>1 (highest priority)</strong> to <strong>${n} (lowest priority)</strong>. Each number can only be used once.</p>
+    `;
+    chatWindow.appendChild(msgDiv);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+
+    buttonGrid.innerHTML = '';
+    buttonGrid.style.gridTemplateColumns = '1fr';
+
+    stepData.options.forEach((optText, i) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex; align-items:center; gap:15px; background:white; border:1px solid #dee2e6; border-radius:8px; padding:14px 16px; margin-bottom:8px;';
+        row.innerHTML = `
+            <input type="number" id="embed-rank-${i}" min="1" max="${n}"
+                style="width:60px; padding:8px; border:2px solid #dee2e6; border-radius:6px; font-size:1.1rem; font-weight:bold; text-align:center; color:#6f42c1;"
+                placeholder="—">
+            <span style="flex:1; font-size:1rem; color:#333; line-height:1.5;">${optText}</span>
+        `;
+        buttonGrid.appendChild(row);
+    });
+
+    const submitBtn = document.createElement('button');
+    submitBtn.style.cssText = 'margin-top:10px; width:100%; background:#6f42c1; color:white; font-weight:bold; font-size:1rem; border:none; padding:14px; border-radius:8px; cursor:pointer;';
+    submitBtn.innerText = pendingPrioritySteps.length > 0 ? 'Submit & Continue →' : 'Submit & Finish ✔';
+    submitBtn.onclick = () => submitEmbeddedPriority('universal', stepData, n, advanceOrComplete);
+    buttonGrid.appendChild(submitBtn);
 }
 
 async function completeSimulation() {
