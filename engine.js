@@ -232,10 +232,12 @@ function showQuizFeedbackPanel(isCorrect, ptsEarned, feedbackText) {
 async function completeQuizSimulation() {
     sessionData.endTime = new Date().getTime();
 
-    // Reset grid layout for the save screen
-    buttonGrid.style.gridTemplateColumns = '1fr'; 
-    buttonGrid.innerHTML = '<p style="text-align:center; color:#666;">Saving your high score to the HR Database...</p>';
-    
+    buttonGrid.style.gridTemplateColumns = '1fr';
+
+    const totalQ = scenarioData.questions.length;
+    const correctAnswers = totalQ - quizState.mistakes;
+    const percentageScore = Math.round((correctAnswers / totalQ) * 100);
+
     chatWindow.innerHTML = `
         <div style="text-align:center; padding: 40px 20px;">
             <h1 style="font-size: 4rem; margin-bottom: 10px;">🏆</h1>
@@ -243,32 +245,19 @@ async function completeQuizSimulation() {
             <p style="font-size: 1.3rem; color: #555;">Final Score: <strong style="color: #333;">${quizState.score}</strong></p>
         </div>
     `;
+    buttonGrid.innerHTML = `
+        <div style="text-align:center;">
+            <a href="index.html" style="padding: 12px 24px; background: #00563f; color: white; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 1.1rem;">Finish Module</a>
+        </div>`;
 
-    // Calculate a standard 0-100% for the analytics dashboard
-    const totalQ = scenarioData.questions.length;
-    const correctAnswers = totalQ - quizState.mistakes;
-    const percentageScore = Math.round((correctAnswers / totalQ) * 100);
-
-    const { data, error } = await sbClient
-        .from('training_logs')
-        .insert([{
-            email: sessionData.employeeEmail,
-            module_name: sessionData.moduleName,
-            score: percentageScore,
-            final_mood_score: 50,
-            mistakes: quizState.mistakes.toString(),
-            duration_seconds: Math.round((sessionData.endTime - sessionData.startTime) / 1000)
-        }]);
-
-    if (error) {
-        console.error("SUPABASE CONNECTION ERROR:", error);
-        buttonGrid.innerHTML = '<p style="color:red; text-align:center;">Error saving data. Please contact IT.</p>';
-    } else {
-        buttonGrid.innerHTML = `
-            <div style="text-align:center;">
-                <a href="index.html" style="padding: 12px 24px; background: #00563f; color: white; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 1.1rem;">Return to Hub</a>
-            </div>`;
-    }
+    sbClient.from('training_logs').insert([{
+        email: sessionData.employeeEmail,
+        module_name: sessionData.moduleName,
+        score: percentageScore,
+        final_mood_score: 50,
+        mistakes: quizState.mistakes.toString(),
+        duration_seconds: Math.round((sessionData.endTime - sessionData.startTime) / 1000)
+    }]).then(({ error }) => { if (error) console.error('Training log save error:', error); });
 }
 
 
@@ -399,9 +388,14 @@ function removeFeedbackPanel() {
 }
 
 function loadStep(stepId) {
-    if (stepId === 'start') initializeMoodMeter();
-
     const stepData = scenarioData[stepId];
+
+    if (stepData.type === 'priority') {
+        loadPriorityStep(stepId, stepData);
+        return;
+    }
+
+    if (stepId === 'start') initializeMoodMeter();
 
     if (stepData.imageUrl) {
         const imgDiv = document.createElement('div');
@@ -424,6 +418,86 @@ function loadStep(stepId) {
     });
 }
 
+function loadPriorityStep(stepId, stepData) {
+    const n = stepData.options.length;
+
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'message customer-message';
+    msgDiv.innerHTML = `
+        <p style="font-weight:bold; margin-bottom:6px;">Situation</p>
+        <p style="margin-bottom:10px;">${stepData.situationText}</p>
+        <p style="font-size:0.88rem; color:#666;">Rank each action below from <strong>1 (highest priority)</strong> to <strong>${n} (lowest priority)</strong>. Each number can only be used once.</p>
+    `;
+    chatWindow.appendChild(msgDiv);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+
+    buttonGrid.innerHTML = '';
+    buttonGrid.style.gridTemplateColumns = '1fr';
+
+    stepData.options.forEach((optText, i) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex; align-items:center; gap:15px; background:white; border:1px solid #dee2e6; border-radius:8px; padding:14px 16px; margin-bottom:8px;';
+        row.innerHTML = `
+            <input type="number" id="embed-rank-${i}" min="1" max="${n}"
+                style="width:60px; padding:8px; border:2px solid #dee2e6; border-radius:6px; font-size:1.1rem; font-weight:bold; text-align:center; color:#6f42c1;"
+                placeholder="—">
+            <span style="flex:1; font-size:1rem; color:#333; line-height:1.5;">${optText}</span>
+        `;
+        buttonGrid.appendChild(row);
+    });
+
+    const submitBtn = document.createElement('button');
+    submitBtn.style.cssText = 'margin-top:10px; width:100%; background:#6f42c1; color:white; font-weight:bold; font-size:1rem; border:none; padding:14px; border-radius:8px; cursor:pointer;';
+    submitBtn.innerText = 'Submit & Continue →';
+    submitBtn.onclick = () => submitEmbeddedPriority(stepId, stepData, n);
+    buttonGrid.appendChild(submitBtn);
+}
+
+function submitEmbeddedPriority(stepId, stepData, n) {
+    const rankings = [];
+    const used = new Set();
+
+    for (let i = 0; i < n; i++) {
+        const val = parseInt(document.getElementById(`embed-rank-${i}`).value);
+        if (isNaN(val) || val < 1 || val > n) {
+            alert(`Please assign a priority (1–${n}) to every action.`);
+            return;
+        }
+        if (used.has(val)) {
+            alert(`Each priority number can only be used once. You've used ${val} more than once.`);
+            return;
+        }
+        used.add(val);
+        rankings.push(val);
+    }
+
+    sessionData.choicesLog.push({
+        type: 'priority',
+        stepId,
+        situationText: stepData.situationText,
+        options: stepData.options,
+        rankings,
+        timestamp: new Date().toISOString()
+    });
+
+    const summaryDiv = document.createElement('div');
+    summaryDiv.className = 'message employee-message';
+    summaryDiv.style.backgroundColor = '#e8f5e9';
+    summaryDiv.style.borderLeft = '4px solid #4caf50';
+    const ranked = stepData.options
+        .map((opt, i) => ({ opt, rank: rankings[i] }))
+        .sort((a, b) => a.rank - b.rank)
+        .map(({ rank, opt }) => `<strong>${rank}.</strong> ${opt}`)
+        .join('<br>');
+    summaryDiv.innerHTML = `<p style="margin-bottom:6px;"><strong>Your priorities:</strong></p>${ranked}`;
+    chatWindow.appendChild(summaryDiv);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+
+    buttonGrid.innerHTML = '';
+    removeFeedbackPanel();
+    loadStep(stepData.nextStep);
+}
+
 async function completeSimulation() {
     sessionData.endTime = new Date().getTime();
     sessionData.finalMoodScore = currentMood;
@@ -431,30 +505,26 @@ async function completeSimulation() {
     let finalScore = 100 - (sessionData.criticalErrors * 20);
     if (finalScore < 0) finalScore = 0;
 
-    buttonGrid.innerHTML = '<p style="text-align:center; color:#666;">Saving your results to the HR Database...</p>';
+    chatWindow.innerHTML = `
+        <div style="text-align:center; padding: 40px 20px;">
+            <h1 style="font-size: 4rem; margin-bottom: 10px;">✅</h1>
+            <h2 style="color: #00563f; margin-bottom: 10px; font-size: 2rem;">Simulation Complete!</h2>
+        </div>
+    `;
+    buttonGrid.innerHTML = `
+        <div style="text-align:center;">
+            <a href="index.html" style="padding: 12px 24px; background: #00563f; color: white; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Finish Module</a>
+        </div>`;
 
-    const { data, error } = await sbClient
-        .from('training_logs')
-        .insert([{
-            email: sessionData.employeeEmail,
-            module_name: sessionData.moduleName,
-            score: finalScore,
-            final_mood_score: sessionData.finalMoodScore,
-            mistakes: sessionData.criticalErrors.toString(),
-            choices_log: sessionData.choicesLog,
-            duration_seconds: Math.round((sessionData.endTime - sessionData.startTime) / 1000)
-        }]);
-
-    if (error) {
-        console.error("SUPABASE CONNECTION ERROR:", error);
-        buttonGrid.innerHTML = '<p style="color:red; text-align:center;">Error saving data. Please contact IT.</p>';
-    } else {
-        buttonGrid.innerHTML = `
-            <div style="text-align:center;">
-                <p style="color:green; font-weight:bold; margin-bottom: 15px; font-size: 1.2rem;">✅ Success! Module Completed.</p>
-                <a href="index.html" style="padding: 12px 24px; background: #00563f; color: white; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Return to Training Hub</a>
-            </div>`;
-    }
+    sbClient.from('training_logs').insert([{
+        email: sessionData.employeeEmail,
+        module_name: sessionData.moduleName,
+        score: finalScore,
+        final_mood_score: sessionData.finalMoodScore,
+        mistakes: sessionData.criticalErrors.toString(),
+        choices_log: sessionData.choicesLog,
+        duration_seconds: Math.round((sessionData.endTime - sessionData.startTime) / 1000)
+    }]).then(({ error }) => { if (error) console.error('Training log save error:', error); });
 }// ==========================================
 // MODE C: FORMAL ASSESSMENT LOGIC
 // ==========================================
@@ -582,7 +652,6 @@ function renderAssessmentNavigationControls(total) {
 async function calculateAndSaveAssessmentResults() {
     sessionData.endTime = new Date().getTime();
     removeFeedbackPanel();
-    buttonGrid.innerHTML = '<p style="text-align:center; color:#666;">Evaluating score metrics with tracking databases...</p>';
 
     let absoluteCorrectCount = 0;
     const totalQ = scenarioData.questions.length;
@@ -618,26 +687,19 @@ async function calculateAndSaveAssessmentResults() {
 
     const totalMistakesValue = (totalQ - absoluteCorrectCount).toString();
 
-    const { data, error } = await sbClient
-        .from('training_logs')
-        .insert([{
-            email: sessionData.employeeEmail,
-            module_name: sessionData.moduleName,
-            score: finalPercentage,
-            final_mood_score: 50,
-            mistakes: totalMistakesValue,
-            duration_seconds: Math.round((sessionData.endTime - sessionData.startTime) / 1000)
-        }]);
+    buttonGrid.innerHTML = `
+        <div style="text-align:center;">
+            <a href="index.html" style="padding: 12px 24px; background: #00563f; color: white; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 1.1rem;">Finish Module</a>
+        </div>`;
 
-    if (error) {
-        console.error("SUPABASE SYSTEM TIMEOUT:", error);
-        buttonGrid.innerHTML = '<p style="color:red; text-align:center;">Database logging timed out. Please contact IT administration.</p>';
-    } else {
-        buttonGrid.innerHTML = `
-            <div style="text-align:center;">
-                <a href="index.html" style="padding: 12px 24px; background: #00563f; color: white; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 1.1rem;">Return to Dashboard</a>
-            </div>`;
-    }
+    sbClient.from('training_logs').insert([{
+        email: sessionData.employeeEmail,
+        module_name: sessionData.moduleName,
+        score: finalPercentage,
+        final_mood_score: 50,
+        mistakes: totalMistakesValue,
+        duration_seconds: Math.round((sessionData.endTime - sessionData.startTime) / 1000)
+    }]).then(({ error }) => { if (error) console.error('Training log save error:', error); });
 }
 
 // ==========================================
@@ -755,26 +817,17 @@ async function completePrioritySurvey() {
             <p style="color:#666; font-size:1.05rem; line-height:1.6;">Thank you — your responses have been recorded.<br>There are no right or wrong answers here.</p>
         </div>
     `;
-    buttonGrid.innerHTML = '<p style="text-align:center; color:#999; font-size:0.9rem;">Saving your responses...</p>';
+    buttonGrid.innerHTML = `
+        <div style="text-align:center;">
+            <a href="index.html" style="padding:12px 28px; background:#6f42c1; color:white; text-decoration:none; border-radius:6px; display:inline-block; font-weight:bold; font-size:1rem;">Finish Module</a>
+        </div>`;
 
-    const { error } = await sbClient
-        .from('training_logs')
-        .insert([{
-            email: sessionData.employeeEmail,
-            module_name: sessionData.moduleName,
-            score: 0,
-            final_mood_score: 0,
-            mistakes: JSON.stringify(priorityState.allRankings),
-            duration_seconds: Math.round((sessionData.endTime - sessionData.startTime) / 1000)
-        }]);
-
-    if (error) {
-        console.error("Priority survey save error:", error);
-        buttonGrid.innerHTML = '<p style="color:red; text-align:center;">Error saving responses. Please contact IT.</p>';
-    } else {
-        buttonGrid.innerHTML = `
-            <div style="text-align:center;">
-                <a href="index.html" style="padding:12px 28px; background:#6f42c1; color:white; text-decoration:none; border-radius:6px; display:inline-block; font-weight:bold; font-size:1rem;">Return to Hub</a>
-            </div>`;
-    }
+    sbClient.from('training_logs').insert([{
+        email: sessionData.employeeEmail,
+        module_name: sessionData.moduleName,
+        score: 0,
+        final_mood_score: 0,
+        mistakes: JSON.stringify(priorityState.allRankings),
+        duration_seconds: Math.round((sessionData.endTime - sessionData.startTime) / 1000)
+    }]).then(({ error }) => { if (error) console.error('Training log save error:', error); });
 }

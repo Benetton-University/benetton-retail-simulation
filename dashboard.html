@@ -65,6 +65,12 @@
         .mini-bar-track { background: #eee; border-radius: 3px; height: 6px; width: 80px; display: inline-block; vertical-align: middle; margin-left: 8px; }
         .mini-bar-fill { height: 100%; border-radius: 3px; }
         .table-empty { text-align: center; color: #aaa; padding: 40px; font-style: italic; }
+        .heatmap-wrap { background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow: auto; margin-bottom: 40px; padding: 20px; }
+        .heatmap-table { border-collapse: collapse; width: 100%; min-width: 400px; }
+        .heatmap-table th { background: #f9f9f9; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.8px; color: #888; font-weight: 600; padding: 10px 14px; text-align: center; border: 1px solid #eaeaea; }
+        .heatmap-table th.action-header { text-align: left; min-width: 180px; }
+        .heatmap-table td { padding: 10px 14px; font-size: 0.9rem; border: 1px solid #eaeaea; text-align: center; vertical-align: middle; }
+        .heatmap-table td.action-name { text-align: left; font-weight: 500; color: #333; min-width: 160px; }
     </style>
 </head>
 <body>
@@ -167,6 +173,24 @@
                 <canvas id="progressionChart"></canvas>
             </div>
         </div>
+
+        <!-- Priority Ranking Insights -->
+        <div class="section-header" style="margin-top: 40px;">
+            <div>
+                <h2>Priority Ranking Insights</h2>
+                <p>Heatmap of how employees ranked each action — aggregated across all responses</p>
+            </div>
+            <select id="priority-select" onchange="renderHeatmap(this.value)"
+                style="border:1px solid #ddd; border-radius:5px; padding:6px 14px; font-size:0.88rem; color:#555; cursor:pointer; background:white; min-width:160px;">
+                <option value="">— Select Situation —</option>
+            </select>
+        </div>
+        <div class="heatmap-wrap" id="heatmap-container">
+            <p id="heatmap-placeholder" style="text-align:center; color:#aaa; padding:60px 20px; font-style:italic; font-size:0.95rem;">
+                Select a situation above to see the ranking heatmap.
+            </p>
+            <div id="heatmap-table-wrap" style="display:none;"></div>
+        </div>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -207,6 +231,7 @@
         let currentSort = 'name';
         let progressionData = {};
         let progressionChart = null;
+        let priorityHeatData = {};
         const chartColors = ['#00563f','#2196f3','#ff5722','#9c27b0','#ff9800','#009688','#e91e63','#607d8b'];
 
         async function fetchAnalytics() {
@@ -322,8 +347,29 @@
                         });
                     });
 
+                // Build priority heatmap data from choices_log
+                priorityHeatData = {};
+                data.forEach(log => {
+                    const choicesLog = log.choices_log;
+                    if (!Array.isArray(choicesLog)) return;
+                    choicesLog.forEach(entry => {
+                        if (entry.type !== 'priority') return;
+                        const key = entry.situationText || entry.stepId || 'Unknown Situation';
+                        if (!priorityHeatData[key]) {
+                            priorityHeatData[key] = { options: entry.options || [], rankCounts: {}, totalResponses: 0 };
+                            (entry.options || []).forEach((_, i) => { priorityHeatData[key].rankCounts[i] = {}; });
+                        }
+                        (entry.rankings || []).forEach((rank, optIdx) => {
+                            if (!priorityHeatData[key].rankCounts[optIdx]) priorityHeatData[key].rankCounts[optIdx] = {};
+                            priorityHeatData[key].rankCounts[optIdx][rank] = (priorityHeatData[key].rankCounts[optIdx][rank] || 0) + 1;
+                        });
+                        priorityHeatData[key].totalResponses++;
+                    });
+                });
+
                 renderEmployeeTable();
                 populateProgressionDropdown();
+                populatePriorityDropdown();
             } catch (err) {
                 console.error('fetchAnalytics error:', err);
                 document.getElementById('risk-module').innerText = "Database Error";
@@ -465,6 +511,76 @@
                     }
                 }
             });
+        }
+
+        function populatePriorityDropdown() {
+            const sel = document.getElementById('priority-select');
+            sel.innerHTML = '<option value="">— Select Situation —</option>';
+            const keys = Object.keys(priorityHeatData);
+            if (keys.length === 0) {
+                document.getElementById('heatmap-placeholder').textContent = 'No priority ranking data collected yet.';
+                return;
+            }
+            keys.forEach(key => {
+                const opt = document.createElement('option');
+                opt.value = key;
+                opt.textContent = key.length > 70 ? key.slice(0, 67) + '...' : key;
+                sel.appendChild(opt);
+            });
+        }
+
+        function renderHeatmap(key) {
+            const placeholder = document.getElementById('heatmap-placeholder');
+            const tableWrap = document.getElementById('heatmap-table-wrap');
+
+            if (!key || !priorityHeatData[key]) {
+                placeholder.style.display = 'block';
+                tableWrap.style.display = 'none';
+                return;
+            }
+
+            const { options, rankCounts, totalResponses } = priorityHeatData[key];
+            const n = options.length;
+
+            let maxCount = 1;
+            for (let i = 0; i < n; i++) {
+                for (let r = 1; r <= n; r++) {
+                    maxCount = Math.max(maxCount, rankCounts[i]?.[r] || 0);
+                }
+            }
+
+            let headerCells = '<th class="action-header">Action</th>';
+            for (let r = 1; r <= n; r++) headerCells += `<th>Rank ${r}</th>`;
+            headerCells += '<th style="color:#aaa;">Total</th>';
+
+            let bodyRows = '';
+            options.forEach((opt, i) => {
+                let cells = `<td class="action-name">${opt}</td>`;
+                let rowTotal = 0;
+                for (let r = 1; r <= n; r++) {
+                    const count = rankCounts[i]?.[r] || 0;
+                    rowTotal += count;
+                    const intensity = maxCount > 0 ? count / maxCount : 0;
+                    const bg = intensity > 0 ? `rgba(0,86,63,${(intensity * 0.7 + 0.1).toFixed(2)})` : 'transparent';
+                    const fg = intensity > 0.55 ? 'white' : '#333';
+                    cells += `<td style="background:${bg}; color:${fg}; font-weight:${count > 0 ? '700' : '400'};">${count > 0 ? count : '—'}</td>`;
+                }
+                cells += `<td style="color:#aaa; font-size:0.82rem;">${rowTotal}</td>`;
+                bodyRows += `<tr>${cells}</tr>`;
+            });
+
+            tableWrap.innerHTML = `
+                <p style="font-size:0.82rem; color:#888; margin-bottom:12px; font-style:italic;">${totalResponses} total response${totalResponses !== 1 ? 's' : ''} · Darker cell = more employees chose that rank</p>
+                <div style="overflow-x:auto;">
+                    <table class="heatmap-table">
+                        <thead><tr>${headerCells}</tr></thead>
+                        <tbody>${bodyRows}</tbody>
+                    </table>
+                </div>
+            `;
+
+            placeholder.style.display = 'none';
+            tableWrap.style.display = 'block';
         }
 
         function drawCharts(errorLabels, errorsData, moodLabels, moodData) {

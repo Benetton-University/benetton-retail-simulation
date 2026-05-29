@@ -149,40 +149,74 @@
             const stepHtml = `
                 <div class="step-card" id="step-node-${stepCount}">
                     <div class="step-header">
-                        <span>Dialogue Step</span>
-                        ${!isStart ? `<button class="remove-btn" onclick="this.parentElement.parentElement.remove()">Remove Step</button>` : `<span style="color:#666; font-size:0.8rem;">(Starting Node)</span>`}
+                        <select class="step-type-select" onchange="toggleStepType(this, ${stepCount})" style="font-size:0.85rem; padding:4px 8px; border:1px solid #ccc; border-radius:4px; cursor:pointer; font-weight:bold; color:#00563f; background:white;">
+                            <option value="dialogue">💬 Dialogue Step</option>
+                            <option value="priority">🧭 Priority Ranking Step</option>
+                        </select>
+                        ${!isStart ? `<button class="remove-btn" onclick="this.closest('.step-card').remove()">Remove Step</button>` : `<span style="color:#666; font-size:0.8rem;">(Starting Node)</span>`}
                     </div>
                     <div class="form-group">
                         <label>Step ID (Used to link options here)</label>
                         <input type="text" class="step-id" value="${stepIdVal}" ${isStart ? 'readonly' : ''} placeholder="e.g., shoeResponse">
                     </div>
-                    <div class="form-group">
-                        <label>Scene Image <span style="color:#888; font-weight:normal;">(optional — shown above the dialogue in the simulation)</span></label>
-                        <input type="file" accept="image/*" class="step-image-file" style="display:block; margin-bottom:8px;" onchange="previewStepImage(this, ${stepCount})">
-                        <input type="text" class="step-image-url" placeholder="Or paste an image URL (https://...)">
-                        <div id="step-img-preview-${stepCount}" style="margin-top:8px; display:none;">
-                            <img id="step-img-el-${stepCount}" src="" alt="preview" style="max-width:100%; max-height:160px; border-radius:8px; object-fit:cover; border:1px solid #ddd;">
-                            <button type="button" onclick="clearStepImage(${stepCount})" style="display:block; margin-top:5px; background:none; border:none; color:#dc3545; cursor:pointer; font-size:0.85rem; font-weight:bold;">✕ Remove image</button>
+
+                    <!-- DIALOGUE SECTION -->
+                    <div class="dialogue-section">
+                        <div class="form-group">
+                            <label>Scene Image <span style="color:#888; font-weight:normal;">(optional)</span></label>
+                            <input type="file" accept="image/*" class="step-image-file" style="display:block; margin-bottom:8px;" onchange="previewStepImage(this, ${stepCount})">
+                            <input type="text" class="step-image-url" placeholder="Or paste an image URL (https://...)">
+                            <div id="step-img-preview-${stepCount}" style="margin-top:8px; display:none;">
+                                <img id="step-img-el-${stepCount}" src="" alt="preview" style="max-width:100%; max-height:160px; border-radius:8px; object-fit:cover; border:1px solid #ddd;">
+                                <button type="button" onclick="clearStepImage(${stepCount})" style="display:block; margin-top:5px; background:none; border:none; color:#dc3545; cursor:pointer; font-size:0.85rem; font-weight:bold;">✕ Remove image</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Customer/Manager Dialogue Text</label>
+                            <textarea class="customer-text" rows="2" placeholder="What does the customer say?"></textarea>
+                        </div>
+                        <div class="options-container"></div>
+                        <button class="add-btn" onclick="addOption(this)">↳ Add Employee Option</button>
+                    </div>
+
+                    <!-- PRIORITY RANKING SECTION -->
+                    <div class="priority-section" style="display:none;">
+                        <div class="form-group">
+                            <label>Situation Text <span style="color:#888; font-weight:normal;">(shown to the employee above the ranking inputs)</span></label>
+                            <textarea class="priority-situation" rows="2" placeholder="Describe the situation the employee must prioritize..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Actions to Rank</label>
+                            <p style="font-size:0.82rem; color:#888; margin-bottom:8px; font-weight:normal;">Employees will rank these. Responses are logged for analytics — no right or wrong answer.</p>
+                            <div class="priority-options-list"></div>
+                            <button class="add-btn" type="button" onclick="addPriorityOption(this.previousElementSibling)">➕ Add Action</button>
+                        </div>
+                        <div class="form-group">
+                            <label>Next Step ID <span style="color:#888; font-weight:normal;">(where to go after the employee submits their ranking)</span></label>
+                            <input type="text" class="priority-next-step" placeholder="e.g., step_2 or endModule">
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label>Customer/Manager Dialogue Text</label>
-                        <textarea class="customer-text" rows="2" placeholder="What does the customer say?"></textarea>
-                    </div>
-                    
-                    <div class="options-container"></div>
-                    <button class="add-btn" onclick="addOption(this)">↳ Add Employee Option</button>
                 </div>
             `;
             document.getElementById(`steps-container-${scenarioIndex}`).insertAdjacentHTML('beforeend', stepHtml);
 
             if (prefillData) {
                 const stepCard = document.getElementById(`step-node-${stepCount}`);
-                if (prefillData.imageUrl) { stepCard.querySelector('.step-image-url').value = prefillData.imageUrl; showStepPreview(stepCount, prefillData.imageUrl); }
-                stepCard.querySelector('.customer-text').value = prefillData.customerText || '';
-                (prefillData.options || []).forEach(opt => {
-                    addOption(stepCard.querySelector('.add-btn'), opt);
-                });
+                if (prefillData.type === 'priority') {
+                    const typeSelect = stepCard.querySelector('.step-type-select');
+                    typeSelect.value = 'priority';
+                    toggleStepType(typeSelect, stepCount);
+                    stepCard.querySelector('.priority-situation').value = prefillData.situationText || '';
+                    const optsList = stepCard.querySelector('.priority-options-list');
+                    (prefillData.options || []).forEach(opt => addPriorityOption(optsList, opt));
+                    stepCard.querySelector('.priority-next-step').value = prefillData.nextStep || '';
+                } else {
+                    if (prefillData.imageUrl) { stepCard.querySelector('.step-image-url').value = prefillData.imageUrl; showStepPreview(stepCount, prefillData.imageUrl); }
+                    stepCard.querySelector('.customer-text').value = prefillData.customerText || '';
+                    (prefillData.options || []).forEach(opt => {
+                        addOption(stepCard.querySelector('.dialogue-section .add-btn'), opt);
+                    });
+                }
             }
         }
 
@@ -256,6 +290,22 @@
             const el = document.getElementById(`step-img-el-${sId}`);
             if (el && el.src && el.src !== window.location.href) return el.src;
             return '';
+        }
+
+        // --- PRIORITY STEP HELPERS ---
+        function toggleStepType(select, sId) {
+            const card = document.getElementById(`step-node-${sId}`);
+            const isDialogue = select.value === 'dialogue';
+            card.querySelector('.dialogue-section').style.display = isDialogue ? '' : 'none';
+            card.querySelector('.priority-section').style.display = isDialogue ? 'none' : '';
+        }
+
+        function addPriorityOption(list, value = '') {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex; align-items:center; gap:8px; margin-bottom:8px;';
+            row.innerHTML = `<input type="text" class="priority-option-text" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:4px; font-size:0.9rem;" placeholder="e.g., Greet the customer first"><button type="button" onclick="this.parentElement.remove()" style="background:#dc3545; color:white; border:none; padding:5px 8px; border-radius:4px; cursor:pointer; font-size:0.8rem;">✕</button>`;
+            list.appendChild(row);
+            if (value) row.querySelector('.priority-option-text').value = value;
         }
 
         // --- EDIT MODE LOADER ---
@@ -336,23 +386,35 @@
                 let scenarioObj = {};
                 document.querySelectorAll(`#steps-container-${i} .step-card`).forEach(step => {
                     const stepId = step.querySelector('.step-id').value.trim();
-                    const customerText = step.querySelector('.customer-text').value.trim();
-                    let optionsArray = [];
-                    step.querySelectorAll('.option-card').forEach(opt => {
-                        optionsArray.push({
-                            text: opt.querySelector('.opt-text').value.trim(),
-                            nextStep: opt.querySelector('.opt-next').value.trim() || 'endModule',
-                            isOptimal: opt.querySelector('.opt-optimal').checked,
-                            moodChange: parseInt(opt.querySelector('.opt-mood').value) || 0,
-                            feedback: opt.querySelector('.opt-feedback').value.trim()
+                    if (!stepId) return;
+                    const stepType = step.querySelector('.step-type-select').value;
+
+                    if (stepType === 'priority') {
+                        const situationText = step.querySelector('.priority-situation').value.trim();
+                        const options = Array.from(step.querySelectorAll('.priority-option-text')).map(inp => inp.value.trim()).filter(v => v);
+                        const nextStep = step.querySelector('.priority-next-step').value.trim() || 'endModule';
+                        if (situationText && options.length > 0) {
+                            scenarioObj[stepId] = { type: 'priority', situationText, options, nextStep };
+                        }
+                    } else {
+                        const customerText = step.querySelector('.customer-text').value.trim();
+                        let optionsArray = [];
+                        step.querySelectorAll('.option-card').forEach(opt => {
+                            optionsArray.push({
+                                text: opt.querySelector('.opt-text').value.trim(),
+                                nextStep: opt.querySelector('.opt-next').value.trim() || 'endModule',
+                                isOptimal: opt.querySelector('.opt-optimal').checked,
+                                moodChange: parseInt(opt.querySelector('.opt-mood').value) || 0,
+                                feedback: opt.querySelector('.opt-feedback').value.trim()
+                            });
                         });
-                    });
-                    if (stepId && customerText) {
-                        const sId = step.id.replace('step-node-', '');
-                        const imageUrl = getStepImage(step, sId);
-                        const stepObj = { customerText, options: optionsArray };
-                        if (imageUrl) stepObj.imageUrl = imageUrl;
-                        scenarioObj[stepId] = stepObj;
+                        if (customerText) {
+                            const sId = step.id.replace('step-node-', '');
+                            const imageUrl = getStepImage(step, sId);
+                            const stepObj = { customerText, options: optionsArray };
+                            if (imageUrl) stepObj.imageUrl = imageUrl;
+                            scenarioObj[stepId] = stepObj;
+                        }
                     }
                 });
                 scenarios.push(scenarioObj);
