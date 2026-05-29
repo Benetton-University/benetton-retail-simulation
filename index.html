@@ -85,16 +85,6 @@
                 </div>
             </section>
 
-            <section class="role-section" style="margin-bottom: 50px;">
-                <div class="role-title" style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #00563f; padding-bottom: 8px;">
-                    <span style="font-size: 1.6rem;">🧭</span>
-                    <h2 style="color: #00563f; font-size: 1.5rem; font-weight: bold;">Priority Surveys</h2>
-                </div>
-                <div class="card-grid" id="priority-grid">
-                    <p style="padding: 10px; color: #888; font-style: italic;">Loading priority surveys...</p>
-                </div>
-            </section>
-
         </main>
     </div>
 
@@ -198,10 +188,9 @@ async function showLoggedInView(email) {
             const simGrid = document.getElementById('simulation-grid');
             const quizGrid = document.getElementById('quiz-grid');
             const assessGrid = document.getElementById('assessment-grid');
-            const priorityGrid = document.getElementById('priority-grid');
 
-            simGrid.innerHTML = ''; quizGrid.innerHTML = ''; assessGrid.innerHTML = ''; priorityGrid.innerHTML = '';
-            let hasSims = false, hasQuizzes = false, hasAssessments = false, hasPriority = false;
+            simGrid.innerHTML = ''; quizGrid.innerHTML = ''; assessGrid.innerHTML = '';
+            let hasSims = false, hasQuizzes = false, hasAssessments = false;
 
             data.forEach(mod => {
                 const safeUrl = `simulation.html?module=${encodeURIComponent(mod.module_name)}`;
@@ -220,16 +209,14 @@ async function showLoggedInView(email) {
                 `;
 
                 const type = mod.module_type || 'scenario';
-                if (type === 'scenario')        { simGrid.innerHTML += cardHtml;      hasSims = true; }
-                else if (type === 'quiz')        { quizGrid.innerHTML += cardHtml;     hasQuizzes = true; }
-                else if (type === 'assessment')  { assessGrid.innerHTML += cardHtml;   hasAssessments = true; }
-                else if (type === 'priority')    { priorityGrid.innerHTML += cardHtml; hasPriority = true; }
+                if (type === 'scenario')        { simGrid.innerHTML += cardHtml;    hasSims = true; }
+                else if (type === 'quiz')        { quizGrid.innerHTML += cardHtml;   hasQuizzes = true; }
+                else if (type === 'assessment')  { assessGrid.innerHTML += cardHtml; hasAssessments = true; }
             });
 
-            if (!hasSims)        simGrid.innerHTML      = '<p style="padding:10px;color:#999;font-style:italic;">No active situational scenarios available right now.</p>';
-            if (!hasQuizzes)     quizGrid.innerHTML     = '<p style="padding:10px;color:#999;font-style:italic;">No core knowledge check quizzes deployed at this time.</p>';
-            if (!hasAssessments) assessGrid.innerHTML   = '<p style="padding:10px;color:#999;font-style:italic;">No formal certification assessments listed for your profile.</p>';
-            if (!hasPriority)    priorityGrid.innerHTML = '<p style="padding:10px;color:#999;font-style:italic;">No priority surveys available right now.</p>';
+            if (!hasSims)        simGrid.innerHTML    = '<p style="padding:10px;color:#999;font-style:italic;">No active situational scenarios available right now.</p>';
+            if (!hasQuizzes)     quizGrid.innerHTML   = '<p style="padding:10px;color:#999;font-style:italic;">No core knowledge check quizzes deployed at this time.</p>';
+            if (!hasAssessments) assessGrid.innerHTML = '<p style="padding:10px;color:#999;font-style:italic;">No formal certification assessments listed for your profile.</p>';
         }
 
         async function loadDynamicCourses() {
