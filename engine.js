@@ -839,10 +839,19 @@ function submitPriorityAnswer() {
         rankings.push(val);
     }
 
+    const currentQ = scenarioData.questions[priorityState.currentIndex];
     priorityState.allRankings.push({
         question: priorityState.currentIndex,
-        title: scenarioData.questions[priorityState.currentIndex].title,
+        title: currentQ.title,
         rankings
+    });
+
+    sessionData.choicesLog.push({
+        type: 'priority',
+        situationText: currentQ.situation,
+        options: currentQ.options,
+        rankings,
+        timestamp: new Date().toISOString()
     });
 
     if (priorityState.currentIndex + 1 < scenarioData.questions.length) {
@@ -873,6 +882,7 @@ async function completePrioritySurvey() {
         score: 0,
         final_mood_score: 0,
         mistakes: JSON.stringify(priorityState.allRankings),
+        choices_log: sessionData.choicesLog,
         duration_seconds: Math.round((sessionData.endTime - sessionData.startTime) / 1000)
     }]).then(({ error }) => { if (error) console.error('Training log save error:', error); });
 }
