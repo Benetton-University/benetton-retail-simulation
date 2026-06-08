@@ -1,11 +1,12 @@
+require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const csv = require('csv-parser');
 
 // Initialize with Service Role Key
 const supabaseAdmin = createClient(
-    'https://lttebmghqpahjclycxau.supabase.co', 
-    'sb_secret_YXM87Z3htrcOW_jncV9Omg_ObWp0W0w'
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY
 );
 
 const results = [];
@@ -16,6 +17,7 @@ console.log("Reading CSV file...");
 fs.createReadStream('employees.csv')
   .pipe(csv())
   .on('data', (data) => results.push(data))
+  .on('error', (err) => console.error('❌ Failed to read CSV:', err.message))
   .on('end', async () => {
     console.log(`Found ${results.length} employees. Creating accounts with temporary passwords...`);
     
@@ -59,6 +61,7 @@ fs.createReadStream('employees.csv')
     
     console.log("===========================");
     console.log(`FINISHED! Accounts ready for login.`);
+    console.log(`Succeeded: ${successCount} | Failed: ${failCount}`);
     console.log(`Login URL: https://sojaosid.github.io/benetton-retail-simulation/`);
     console.log(`Default Password: ${TEMP_PASSWORD}`);
     console.log("===========================");
