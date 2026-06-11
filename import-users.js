@@ -10,7 +10,7 @@ const supabaseAdmin = createClient(
 );
 
 const results = [];
-const TEMP_PASSWORD = "Benetton2026!"; // The temporary password for everyone
+const TEMP_PASSWORD = process.env.TEMP_PASSWORD;
 
 console.log("Reading CSV file...");
 
