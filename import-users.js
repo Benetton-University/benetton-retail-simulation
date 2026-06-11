@@ -49,7 +49,7 @@ fs.createReadStream('employees.csv')
 
         const { error: roleError } = await supabaseAdmin
             .from('user_roles')
-            .upsert([{ email: row.email, role: assignedRole }], { onConflict: 'email' });
+            .upsert([{ email: row.email, role: assignedRole, name: row.name || row.Name || null }], { onConflict: 'email' });
 
         if (roleError) {
             console.error(`⚠️ Account created for ${row.email}, but failed to assign role:`, roleError.message);
