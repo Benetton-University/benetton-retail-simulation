@@ -32,24 +32,35 @@ fs.createReadStream('employees.csv')
             email_confirm: true // Automatically "verifies" them so they don't need to check email
         });
         
+        const rawRole = row.role || row.Role;
+        const assignedRole = rawRole ? rawRole.trim().toLowerCase() : 'employee';
+        const name = row.name || row.Name || null;
+
         if (error) {
-            // If they already exist, we just skip the creation and try role assignment
-            if (error.message.includes("already registered")) {
-                console.log(`ℹ️ ${row.email} already has an account. Proceeding to role check...`);
+            if (error.message.toLowerCase().includes("already") && error.message.toLowerCase().includes("registered")) {
+                console.log(`ℹ️ ${row.email} already has an account. Updating name and role...`);
+                const { error: updateError } = await supabaseAdmin
+                    .from('user_roles')
+                    .update({ role: assignedRole, name })
+                    .eq('email', row.email);
+                if (updateError) {
+                    console.error(`⚠️ Failed to update ${row.email}:`, updateError.message);
+                    failCount++;
+                } else {
+                    console.log(`✅ Updated ${row.email}. Role: ${assignedRole}`);
+                    successCount++;
+                }
             } else {
                 console.error(`❌ Failed to create ${row.email}:`, error.message);
                 failCount++;
-                continue;
             }
+            continue;
         }
 
-        // 2. Automate Role Assignment (Same logic as before)
-        const rawRole = row.role || row.Role;
-        const assignedRole = rawRole ? rawRole.trim().toLowerCase() : 'employee'; 
-
+        // New user — insert their role and name
         const { error: roleError } = await supabaseAdmin
             .from('user_roles')
-            .upsert([{ email: row.email, role: assignedRole, name: row.name || row.Name || null }], { onConflict: 'email' });
+            .insert([{ email: row.email, role: assignedRole, name }]);
 
         if (roleError) {
             console.error(`⚠️ Account created for ${row.email}, but failed to assign role:`, roleError.message);
