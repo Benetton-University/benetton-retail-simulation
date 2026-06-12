@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="preconnect" href="https://lttebmghqpahjclycxau.supabase.co">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benetton Training Hub - Manage Users</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f4f7f6; color: #333; overflow-x: hidden; }
+
+        /* Sidebar */
+        .floating-hamburger { position: fixed; top: 20px; left: 20px; font-size: 1.8rem; background: white; border: 2px solid #00563f; color: #00563f; border-radius: 8px; cursor: pointer; z-index: 990; padding: 5px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.2s; }
+        .floating-hamburger:hover { background: #00563f; color: white; }
+        .slide-menu { position: fixed; top: 0; left: -280px; width: 250px; height: 100vh; background-color: #00563f; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.2); transition: left 0.3s ease-in-out; z-index: 1000; }
+        .slide-menu.active { left: 0; }
+        .slide-menu h3 { color: white; margin: 50px 0 20px 10px; font-size: 1.2rem; }
+        .menu-link { display: block; color: white; text-decoration: none; padding: 15px 10px; font-size: 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.1); transition: 0.2s; }
+        .menu-link:hover { background-color: rgba(255,255,255,0.1); border-left: 4px solid #fff; }
+        .close-btn { position: absolute; top: 15px; right: 20px; background: none; border: none; color: white; font-size: 2rem; cursor: pointer; }
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 999; }
+        .overlay.active { display: block; }
+
+        /* Layout */
+        .main-content { width: 100%; max-width: 1000px; margin: 0 auto; padding: 80px 30px 60px 30px; }
+        .header { margin-bottom: 30px; }
+        .header h1 { color: #333; font-size: 2rem; margin-bottom: 5px; }
+        .header p { color: #666; }
+
+        /* Tabs */
+        .tabs { display: flex; gap: 4px; margin-bottom: 28px; border-bottom: 2px solid #e0e0e0; }
+        .tab-btn { background: none; border: none; padding: 12px 22px; font-size: 1rem; color: #888; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: 0.15s; font-weight: 500; }
+        .tab-btn:hover { color: #00563f; }
+        .tab-btn.active { color: #00563f; border-bottom-color: #00563f; }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* Cards */
+        .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); padding: 30px; border-top: 4px solid #00563f; }
+
+        /* Forms */
+        .form-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+        .form-group { display: flex; flex-direction: column; flex: 1; min-width: 200px; }
+        .form-group label { font-size: 0.82rem; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .form-group input, .form-group select { padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem; outline: none; transition: border-color 0.15s; background: white; }
+        .form-group input:focus, .form-group select:focus { border-color: #00563f; }
+
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: 0.15s; }
+        .btn-primary { background: #00563f; color: white; }
+        .btn-primary:hover { background: #003d2c; }
+        .btn-primary:disabled { background: #aaa; cursor: not-allowed; }
+        .btn-ghost { background: #e9ecef; color: #333; }
+        .btn-ghost:hover { background: #dee2e6; }
+        .btn-danger { background: #f8d7da; color: #721c24; }
+        .btn-danger:hover { background: #dc3545; color: white; }
+
+        /* CSV Drop Zone */
+        .drop-zone { border: 2px dashed #ccc; border-radius: 8px; padding: 40px; text-align: center; color: #888; cursor: pointer; transition: 0.2s; margin-bottom: 20px; }
+        .drop-zone:hover, .drop-zone.drag-over { border-color: #00563f; background: #f0faf6; color: #00563f; }
+        .drop-zone input[type="file"] { display: none; }
+        .drop-zone-icon { font-size: 2.5rem; margin-bottom: 10px; }
+        .drop-zone p { font-size: 0.95rem; margin-bottom: 6px; }
+        .drop-zone span { font-size: 0.82rem; }
+
+        /* Preview table */
+        .preview-wrap { background: white; border-radius: 8px; overflow: hidden; border: 1px solid #eee; margin-bottom: 20px; }
+        .preview-header { background: #f9f9f9; padding: 12px 16px; font-size: 0.85rem; color: #666; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .preview-table { width: 100%; border-collapse: collapse; }
+        .preview-table th { background: #f9f9f9; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.8px; color: #888; font-weight: 600; padding: 10px 14px; text-align: left; border-bottom: 1px solid #eaeaea; }
+        .preview-table td { padding: 10px 14px; font-size: 0.9rem; border-bottom: 1px solid #f0f0f0; color: #333; }
+        .preview-table tr:last-child td { border-bottom: none; }
+        .row-error td { background: #fff8f8; color: #c62828; }
+
+        /* User Directory Table */
+        .table-wrap { background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow: hidden; border-top: 4px solid #00563f; }
+        .table-toolbar { padding: 14px 20px; border-bottom: 1px solid #eee; display: flex; gap: 12px; align-items: center; }
+        .table-toolbar input { flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; outline: none; }
+        .table-toolbar input:focus { border-color: #00563f; }
+        .user-table { width: 100%; border-collapse: collapse; }
+        .user-table th { background: #f9f9f9; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.8px; color: #888; font-weight: 600; padding: 12px 16px; text-align: left; border-bottom: 1px solid #eaeaea; }
+        .user-table td { padding: 12px 16px; font-size: 0.92rem; border-bottom: 1px solid #f0f0f0; color: #333; }
+        .user-table tr:last-child td { border-bottom: none; }
+        .user-table tr:hover td { background: #fafafa; }
+        .pill { display: inline-block; border-radius: 12px; padding: 3px 10px; font-size: 0.78rem; font-weight: 600; }
+        .pill-admin { background: #e8f5e9; color: #2e7d32; }
+        .pill-learner { background: #e3f2fd; color: #1565c0; }
+        .pill-employee { background: #fff8e1; color: #f57f17; }
+        .table-empty { text-align: center; color: #aaa; padding: 40px; font-style: italic; }
+        .action-btn { padding: 5px 11px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.82rem; font-weight: 600; margin-right: 4px; transition: 0.15s; }
+        .edit-btn { background: #e9ecef; color: #333; }
+        .edit-btn:hover { background: #dee2e6; }
+        .del-btn { background: #f8d7da; color: #721c24; }
+        .del-btn:hover { background: #dc3545; color: white; }
+
+        /* Modal */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.55); z-index: 1001; justify-content: center; align-items: center; backdrop-filter: blur(3px); }
+        .modal-overlay.active { display: flex; }
+        .modal { background: white; width: 100%; max-width: 460px; border-radius: 12px; padding: 36px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); position: relative; animation: slideUp 0.25s ease-out; }
+        .modal h2 { margin-bottom: 20px; font-size: 1.4rem; color: #333; }
+        .modal-close { position: absolute; top: 14px; right: 18px; font-size: 1.8rem; cursor: pointer; color: #aaa; border: none; background: none; }
+        .modal-close:hover { color: #333; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Password reveal */
+        .password-box { background: #f0faf6; border: 1px solid #a5d6a7; border-radius: 8px; padding: 16px 20px; margin: 16px 0; }
+        .password-box p { font-size: 0.85rem; color: #555; margin-bottom: 6px; }
+        .password-box strong { font-size: 1.2rem; color: #00563f; letter-spacing: 2px; font-family: monospace; }
+
+        /* Toast */
+        #toast { position: fixed; bottom: 28px; right: 28px; background: #333; color: white; padding: 12px 20px; border-radius: 8px; font-size: 0.92rem; z-index: 2000; opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: 320px; }
+        #toast.show { opacity: 1; }
+        #toast.toast-success { background: #2e7d32; }
+        #toast.toast-error { background: #c62828; }
+
+        /* Bulk results */
+        .result-summary { border-radius: 8px; padding: 16px 20px; margin-top: 16px; font-size: 0.92rem; }
+        .result-summary.success { background: #e8f5e9; border-left: 4px solid #2e7d32; color: #2e7d32; }
+        .result-summary.partial { background: #fff8e1; border-left: 4px solid #f9a825; color: #5d4037; }
+    </style>
+</head>
+<body>
+
+    <button id="menu-toggle" class="floating-hamburger">☰</button>
+    <nav id="sidebar" class="slide-menu">
+        <button id="close-menu" class="close-btn">&times;</button>
+        <h3>Benetton Training Hub</h3>
+        <a href="dashboard.html" class="menu-link">📊 Analytics Dashboard</a>
+        <a href="live-monitor.html" class="menu-link">📡 Live Monitor</a>
+        <a href="manage-modules.html" class="menu-link">⚙️ Manage Modules</a>
+        <a href="manage-users.html" class="menu-link" style="background-color: rgba(255,255,255,0.1); border-left: 4px solid #fff;">👥 Manage Users</a>
+        <a href="index.html" class="menu-link">⬅️ Back to Hub</a>
+    </nav>
+    <div id="sidebar-overlay" class="overlay"></div>
+
+    <!-- Edit User Modal -->
+    <div id="edit-modal" class="modal-overlay">
+        <div class="modal">
+            <button class="modal-close" onclick="closeEditModal()">&times;</button>
+            <h2>Edit User</h2>
+            <input type="hidden" id="edit-email-hidden">
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label>Email</label>
+                <input type="text" id="edit-email-display" disabled style="background: #f5f5f5; color: #888;">
+            </div>
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label>Name</label>
+                <input type="text" id="edit-name" placeholder="Full name">
+            </div>
+            <div class="form-group">
+                <label>Role</label>
+                <select id="edit-role">
+                    <option value="employee">Employee</option>
+                    <option value="learner">Learner</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeEditModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirm Modal -->
+    <div id="delete-modal" class="modal-overlay">
+        <div class="modal">
+            <button class="modal-close" onclick="closeDeleteModal()">&times;</button>
+            <h2>Remove User</h2>
+            <p style="color: #666; margin-bottom: 12px;">This will permanently delete <strong id="delete-email-display"></strong> from both the user directory and their login account. This cannot be undone.</p>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeDeleteModal()">Cancel</button>
+                <button class="btn btn-danger" onclick="confirmDelete()">Delete User</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password Reveal Modal -->
+    <div id="password-modal" class="modal-overlay">
+        <div class="modal">
+            <button class="modal-close" onclick="closePasswordModal()">&times;</button>
+            <h2 id="password-modal-title">User Created</h2>
+            <p style="color: #666; margin-bottom: 4px;" id="password-modal-desc"></p>
+            <div class="password-box">
+                <p>Temporary password — share this with the employee:</p>
+                <strong id="password-reveal"></strong>
+            </div>
+            <p style="font-size: 0.82rem; color: #999;">The employee will be prompted to set a permanent password on first login.</p>
+            <div class="modal-actions">
+                <button class="btn btn-primary" onclick="closePasswordModal()">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <main class="main-content">
+        <div class="header">
+            <h1>Manage Users</h1>
+            <p>Add employees, import in bulk, or update existing accounts.</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('add')">➕ Add User</button>
+            <button class="tab-btn" onclick="switchTab('bulk')">📂 Bulk Import</button>
+            <button class="tab-btn" onclick="switchTab('directory')">📋 User Directory</button>
+        </div>
+
+        <!-- Tab: Add Single User -->
+        <div id="tab-add" class="tab-panel active">
+            <div class="card">
+                <h2 style="margin-bottom: 6px; font-size: 1.2rem;">Add a Single User</h2>
+                <p style="color: #888; font-size: 0.9rem; margin-bottom: 24px;">Creates a login account with a temporary password the employee can change on first login.</p>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="single-name" placeholder="e.g. Priya Sharma">
+                    </div>
+                    <div class="form-group">
+                        <label>Email Address *</label>
+                        <input type="email" id="single-email" placeholder="e.g. priya@benetton.co.in">
+                    </div>
+                    <div class="form-group" style="max-width: 160px;">
+                        <label>Role</label>
+                        <select id="single-role">
+                            <option value="employee">Employee</option>
+                            <option value="learner">Learner</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="add-single-btn" onclick="addSingleUser()">Create Account</button>
+            </div>
+        </div>
+
+        <!-- Tab: Bulk Import -->
+        <div id="tab-bulk" class="tab-panel">
+            <div class="card">
+                <h2 style="margin-bottom: 6px; font-size: 1.2rem;">Bulk Import via CSV</h2>
+                <p style="color: #888; font-size: 0.9rem; margin-bottom: 20px;">Upload the same <code>employees.csv</code> format you've always used (columns: <code>name, email, role</code>). Existing users will have their name and role updated.</p>
+
+                <label class="drop-zone" id="drop-zone" for="csv-file-input">
+                    <div class="drop-zone-icon">📄</div>
+                    <p>Drop your CSV here, or click to browse</p>
+                    <span>employees.csv format: name, email, role</span>
+                    <input type="file" id="csv-file-input" accept=".csv" onchange="handleFileSelect(event)">
+                </label>
+
+                <div id="csv-preview" style="display: none;">
+                    <div class="preview-wrap">
+                        <div class="preview-header">
+                            <span id="preview-count"></span>
+                            <button class="btn btn-ghost" style="padding: 4px 10px; font-size: 0.82rem;" onclick="clearCSV()">Clear</button>
+                        </div>
+                        <div style="overflow-x: auto; max-height: 320px; overflow-y: auto;">
+                            <table class="preview-table">
+                                <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr></thead>
+                                <tbody id="preview-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="bulk-import-btn" onclick="runBulkImport()">Import All</button>
+                </div>
+
+                <div id="bulk-result" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- Tab: User Directory -->
+        <div id="tab-directory" class="tab-panel">
+            <div class="table-wrap">
+                <div class="table-toolbar">
+                    <input type="text" id="search-input" placeholder="Search by name or email..." oninput="filterDirectory()">
+                    <button class="btn btn-primary" style="white-space: nowrap;" onclick="loadDirectory()">↻ Refresh</button>
+                </div>
+                <table class="user-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Added</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="directory-tbody">
+                        <tr><td colspan="5" class="table-empty">Loading users...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const DB_URL = 'https://lttebmghqpahjclycxau.supabase.co';
+        const DB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0dGVibWdocXBhaGpjbHljeGF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NDE4NDIsImV4cCI6MjA5MzAxNzg0Mn0.bwsArSg1M4GO0mJV83jttCikkeoXj_HL_yEsRlxptzE';
+        const EDGE_FN = `${DB_URL}/functions/v1/manage-users`;
+
+        const supabase = window.supabase.createClient(DB_URL, DB_KEY);
+
+        let allUsers = [];
+        let pendingDeleteEmail = null;
+        let parsedCSVUsers = [];
+
+        // ── Auth gate ──────────────────────────────────────────────
+        async function init() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) { window.location.href = 'index.html'; return; }
+
+            const { data: roleData } = await supabase
+                .from('user_roles')
+                .select('role')
+                .eq('email', session.user.email)
+                .single();
+
+            if (!roleData || roleData.role !== 'admin') {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            loadDirectory();
+        }
+
+        // ── Edge Function wrapper ──────────────────────────────────
+        async function callFn(body) {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch(EDGE_FN, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify(body),
+            });
+            return res.json();
+        }
+
+        // ── Tabs ───────────────────────────────────────────────────
+        function switchTab(name) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-${name}`).classList.add('active');
+            event.target.classList.add('active');
+            if (name === 'directory') loadDirectory();
+        }
+
+        // ── Single User ───────────────────────────────────────────
+        async function addSingleUser() {
+            const email = document.getElementById('single-email').value.trim();
+            const name = document.getElementById('single-name').value.trim();
+            const role = document.getElementById('single-role').value;
+
+            if (!email || !validateEmail(email)) { showToast('Please enter a valid email address.', 'error'); return; }
+
+            const btn = document.getElementById('add-single-btn');
+            btn.disabled = true; btn.textContent = 'Creating...';
+
+            const result = await callFn({ action: 'create_user', email, name: name || null, role });
+
+            btn.disabled = false; btn.textContent = 'Create Account';
+
+            if (result.error) { showToast(`Error: ${result.error}`, 'error'); return; }
+
+            document.getElementById('single-email').value = '';
+            document.getElementById('single-name').value = '';
+
+            const isUpdate = result.status === 'updated';
+            document.getElementById('password-modal-title').textContent = isUpdate ? 'User Updated' : 'User Created';
+            document.getElementById('password-modal-desc').textContent = isUpdate
+                ? `${email}'s name and role have been updated. Their login password was not changed.`
+                : `Account created for ${email}.`;
+            document.getElementById('password-reveal').textContent = result.tempPassword;
+            document.getElementById('password-modal').classList.add('active');
+            if (!isUpdate) showToast(`Account created for ${email}`, 'success');
+            else showToast(`Updated ${email}`, 'success');
+        }
+
+        // ── CSV Parsing ───────────────────────────────────────────
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => parseCSV(e.target.result);
+            reader.readAsText(file);
+        }
+
+        function parseCSV(text) {
+            const lines = text.trim().split('\n').map(l => l.trim()).filter(Boolean);
+            if (lines.length < 2) { showToast('CSV appears empty or has no data rows.', 'error'); return; }
+
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+            const nameIdx = headers.findIndex(h => h === 'name');
+            const emailIdx = headers.findIndex(h => h === 'email');
+            const roleIdx = headers.findIndex(h => h === 'role');
+
+            if (emailIdx === -1) { showToast('CSV must have an "email" column.', 'error'); return; }
+
+            parsedCSVUsers = lines.slice(1).map(line => {
+                const cols = splitCSVLine(line);
+                const email = cols[emailIdx]?.trim() ?? '';
+                const name = nameIdx !== -1 ? (cols[nameIdx]?.trim() || null) : null;
+                const role = roleIdx !== -1 ? (cols[roleIdx]?.trim().toLowerCase() || 'employee') : 'employee';
+                const valid = validateEmail(email);
+                return { email, name, role, valid };
+            });
+
+            renderPreview();
+        }
+
+        function splitCSVLine(line) {
+            const result = [];
+            let cur = '', inQuotes = false;
+            for (const ch of line) {
+                if (ch === '"') { inQuotes = !inQuotes; }
+                else if (ch === ',' && !inQuotes) { result.push(cur); cur = ''; }
+                else { cur += ch; }
+            }
+            result.push(cur);
+            return result;
+        }
+
+        function renderPreview() {
+            const tbody = document.getElementById('preview-tbody');
+            const count = document.getElementById('preview-count');
+            const validCount = parsedCSVUsers.filter(u => u.valid).length;
+            count.textContent = `${parsedCSVUsers.length} rows — ${validCount} valid`;
+
+            tbody.innerHTML = parsedCSVUsers.map(u => `
+                <tr class="${u.valid ? '' : 'row-error'}">
+                    <td>${escHtml(u.name ?? '—')}</td>
+                    <td>${escHtml(u.email)}</td>
+                    <td>${escHtml(u.role)}</td>
+                    <td>${u.valid ? '✓ Ready' : '✗ Invalid email'}</td>
+                </tr>
+            `).join('');
+
+            document.getElementById('csv-preview').style.display = 'block';
+            document.getElementById('bulk-result').style.display = 'none';
+        }
+
+        function clearCSV() {
+            parsedCSVUsers = [];
+            document.getElementById('csv-preview').style.display = 'none';
+            document.getElementById('csv-file-input').value = '';
+            document.getElementById('bulk-result').style.display = 'none';
+        }
+
+        async function runBulkImport() {
+            const validUsers = parsedCSVUsers.filter(u => u.valid);
+            if (validUsers.length === 0) { showToast('No valid rows to import.', 'error'); return; }
+
+            const btn = document.getElementById('bulk-import-btn');
+            btn.disabled = true;
+            btn.textContent = `Importing ${validUsers.length} users...`;
+
+            const result = await callFn({ action: 'bulk_create', users: validUsers });
+
+            btn.disabled = false; btn.textContent = 'Import All';
+
+            if (result.error) { showToast(`Error: ${result.error}`, 'error'); return; }
+
+            const created = result.results.filter(r => r.status === 'created').length;
+            const updated = result.results.filter(r => r.status === 'updated').length;
+            const failed = result.results.filter(r => r.status === 'error').length;
+
+            const resultDiv = document.getElementById('bulk-result');
+            const isClean = failed === 0;
+            resultDiv.className = `result-summary ${isClean ? 'success' : 'partial'}`;
+            resultDiv.innerHTML = `
+                <strong>Import complete.</strong>
+                ${created > 0 ? `${created} account${created > 1 ? 's' : ''} created. ` : ''}
+                ${updated > 0 ? `${updated} account${updated > 1 ? 's' : ''} updated. ` : ''}
+                ${failed > 0 ? `${failed} failed.` : ''}
+                ${created > 0 || updated > 0 ? `<br><small style="opacity:.8">Temporary password: <code>${result.tempPassword}</code></small>` : ''}
+            `;
+            resultDiv.style.display = 'block';
+
+            if (failed > 0) {
+                const failedRows = result.results.filter(r => r.status === 'error');
+                failedRows.forEach(r => {
+                    const match = parsedCSVUsers.find(u => u.email === r.email);
+                    if (match) match.valid = false;
+                });
+                renderPreview();
+            } else {
+                clearCSV();
+            }
+        }
+
+        // ── Directory ─────────────────────────────────────────────
+        async function loadDirectory() {
+            document.getElementById('directory-tbody').innerHTML =
+                '<tr><td colspan="5" class="table-empty">Loading...</td></tr>';
+
+            const result = await callFn({ action: 'list_users' });
+
+            if (result.error) {
+                document.getElementById('directory-tbody').innerHTML =
+                    `<tr><td colspan="5" class="table-empty">Failed to load: ${result.error}</td></tr>`;
+                return;
+            }
+
+            allUsers = result.users ?? [];
+            renderDirectory(allUsers);
+        }
+
+        function renderDirectory(users) {
+            const tbody = document.getElementById('directory-tbody');
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="table-empty">No users found.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = users.map(u => `
+                <tr>
+                    <td>${escHtml(u.name ?? '—')}</td>
+                    <td>${escHtml(u.email)}</td>
+                    <td><span class="pill pill-${u.role}">${u.role}</span></td>
+                    <td style="color:#888; font-size:0.85rem;">${formatDate(u.created_at)}</td>
+                    <td>
+                        <button class="action-btn edit-btn" onclick="openEditModal(${escAttr(JSON.stringify(u))})">Edit</button>
+                        <button class="action-btn del-btn" onclick="openDeleteModal('${escHtml(u.email)}')">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterDirectory() {
+            const q = document.getElementById('search-input').value.toLowerCase();
+            const filtered = allUsers.filter(u =>
+                (u.name ?? '').toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+            );
+            renderDirectory(filtered);
+        }
+
+        // ── Edit Modal ────────────────────────────────────────────
+        function openEditModal(user) {
+            document.getElementById('edit-email-hidden').value = user.email;
+            document.getElementById('edit-email-display').value = user.email;
+            document.getElementById('edit-name').value = user.name ?? '';
+            document.getElementById('edit-role').value = user.role;
+            document.getElementById('edit-modal').classList.add('active');
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-modal').classList.remove('active');
+        }
+
+        async function saveEdit() {
+            const email = document.getElementById('edit-email-hidden').value;
+            const name = document.getElementById('edit-name').value.trim();
+            const role = document.getElementById('edit-role').value;
+
+            const result = await callFn({ action: 'update_user', email, name: name || null, role });
+
+            if (result.error) { showToast(`Error: ${result.error}`, 'error'); return; }
+
+            closeEditModal();
+            showToast('User updated.', 'success');
+            loadDirectory();
+        }
+
+        // ── Delete Modal ──────────────────────────────────────────
+        function openDeleteModal(email) {
+            pendingDeleteEmail = email;
+            document.getElementById('delete-email-display').textContent = email;
+            document.getElementById('delete-modal').classList.add('active');
+        }
+
+        function closeDeleteModal() {
+            pendingDeleteEmail = null;
+            document.getElementById('delete-modal').classList.remove('active');
+        }
+
+        async function confirmDelete() {
+            if (!pendingDeleteEmail) return;
+            const result = await callFn({ action: 'delete_user', email: pendingDeleteEmail });
+
+            if (result.error) { showToast(`Error: ${result.error}`, 'error'); return; }
+
+            closeDeleteModal();
+            showToast('User deleted.', 'success');
+            loadDirectory();
+        }
+
+        // ── Password Modal ────────────────────────────────────────
+        function closePasswordModal() {
+            document.getElementById('password-modal').classList.remove('active');
+        }
+
+        // ── Sidebar ───────────────────────────────────────────────
+        document.getElementById('menu-toggle').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.add('active');
+            document.getElementById('sidebar-overlay').classList.add('active');
+        });
+        document.getElementById('close-menu').addEventListener('click', closeSidebar);
+        document.getElementById('sidebar-overlay').addEventListener('click', closeSidebar);
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('active');
+            document.getElementById('sidebar-overlay').classList.remove('active');
+        }
+
+        // ── Drag & drop ───────────────────────────────────────────
+        const dropZone = document.getElementById('drop-zone');
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file && file.name.endsWith('.csv')) {
+                const reader = new FileReader();
+                reader.onload = ev => parseCSV(ev.target.result);
+                reader.readAsText(file);
+            } else {
+                showToast('Please drop a .csv file.', 'error');
+            }
+        });
+
+        // ── Utilities ─────────────────────────────────────────────
+        function showToast(msg, type = '') {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = `show ${type === 'success' ? 'toast-success' : type === 'error' ? 'toast-error' : ''}`;
+            setTimeout(() => t.className = '', 3500);
+        }
+
+        function validateEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        function formatDate(iso) {
+            if (!iso) return '—';
+            return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        function escHtml(str) {
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function escAttr(str) {
+            return str.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+        }
+
+        init();
+    </script>
+</body>
+</html>
