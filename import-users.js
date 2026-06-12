@@ -62,7 +62,7 @@ fs.createReadStream('employees.csv')
     console.log("===========================");
     console.log(`FINISHED! Accounts ready for login.`);
     console.log(`Succeeded: ${successCount} | Failed: ${failCount}`);
-    console.log(`Login URL: https://sojaosid.github.io/benetton-retail-simulation/`);
+    console.log(`Login URL: https://benetton-university.github.io/benetton-retail-simulation/`);
     console.log(`Default Password: ${TEMP_PASSWORD}`);
     console.log("===========================");
   });
