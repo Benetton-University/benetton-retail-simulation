@@ -312,14 +312,11 @@
 
                 drawCharts(errorLabels, avgMistakesData, moodLabels, avgMoodData);
 
-                // Build name map from static CSV (avoids Supabase RLS row restrictions)
+                // Build name map from user_roles table
                 const nameMap = {};
                 try {
-                    const csvText = await fetch('employees.csv').then(r => r.text());
-                    csvText.trim().split('\n').slice(1).forEach(line => {
-                        const [name, email] = line.split(',');
-                        if (email) nameMap[email.trim().toLowerCase()] = name.trim();
-                    });
+                    const { data: nameRows } = await db.from('user_roles').select('email, name');
+                    if (nameRows) nameRows.forEach(r => { if (r.email && r.name) nameMap[r.email.toLowerCase()] = r.name; });
                 } catch (e) {}
 
                 employeeRows = Object.entries(userStats).map(([email, s]) => ({

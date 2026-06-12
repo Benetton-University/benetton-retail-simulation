@@ -155,22 +155,10 @@ async function showLoggedInView(email) {
                 }
             } catch(e) {}
 
-            // Fetch name from CSV (source of truth) and role from DB in parallel
-            const [csvText, { data }] = await Promise.all([
-                fetch('employees.csv').then(r => r.text()).catch(() => ''),
-                supabaseClient.from('user_roles').select('role').eq('email', email).single()
-            ]);
+            // Fetch name and role from DB
+            const { data } = await supabaseClient.from('user_roles').select('role, name').eq('email', email).single();
 
-            let displayName = email.split('@')[0];
-            if (csvText) {
-                csvText.trim().split('\n').slice(1).forEach(line => {
-                    const [name, csvEmail] = line.split(',');
-                    if (csvEmail && csvEmail.trim().toLowerCase() === email.toLowerCase()) {
-                        displayName = name.trim();
-                    }
-                });
-            }
-
+            const displayName = (data && data.name) ? data.name : email.split('@')[0];
             if (nameDisplay) nameDisplay.textContent = displayName;
 
             if (data) {
