@@ -268,7 +268,15 @@
             }
         }
 
-        window.onload = async () => {
+        let pageInitialized = false;
+        async function initPage(session) {
+            if (pageInitialized) return;
+            pageInitialized = true;
+            const { data: roleData } = await sbClient.from('user_roles').select('role').eq('email', session.user.email).single();
+            if (!roleData || roleData.role !== 'admin') {
+                window.location.href = "index.html";
+                return;
+            }
             const params = new URLSearchParams(window.location.search);
             const editId = params.get('edit');
             if (editId) {
@@ -276,7 +284,19 @@
             } else {
                 addQuestionCard();
             }
-        };
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await sbClient.auth.getSession();
+            if (session) { initPage(session); }
+        });
+
+        sbClient.auth.onAuthStateChange(async (event, session) => {
+            if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+                if (!session) { window.location.href = "index.html"; return; }
+                initPage(session);
+            }
+        });
 
         const menuToggle = document.getElementById('menu-toggle');
         const closeMenu = document.getElementById('close-menu');
