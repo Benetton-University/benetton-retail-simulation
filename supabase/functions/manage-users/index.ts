@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
     // --- CREATE SINGLE ---
     if (action === 'create_user') {
       const { email, name, role } = payload
-      const assignedRole = (role ?? 'employee').toLowerCase()
+      const assignedRole = (role ?? 'learner').toLowerCase()
 
       const { error: createError } = await supabaseAdmin.auth.admin.createUser({
         email,
@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
       const results: { email: string; status: string; message?: string }[] = []
 
       for (const u of users) {
-        const assignedRole = (u.role ?? 'employee').toLowerCase()
+        const assignedRole = (u.role ?? 'learner').toLowerCase()
         try {
           const { error: createError } = await supabaseAdmin.auth.admin.createUser({
             email: u.email,

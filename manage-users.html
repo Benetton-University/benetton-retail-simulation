@@ -151,7 +151,6 @@
             <div class="form-group">
                 <label>Role</label>
                 <select id="edit-role">
-                    <option value="employee">Employee</option>
                     <option value="learner">Learner</option>
                     <option value="admin">Admin</option>
                 </select>
@@ -222,7 +221,6 @@
                     <div class="form-group" style="max-width: 160px;">
                         <label>Role</label>
                         <select id="single-role">
-                            <option value="employee">Employee</option>
                             <option value="learner">Learner</option>
                             <option value="admin">Admin</option>
                         </select>
@@ -399,7 +397,7 @@
                 var cols = splitCSVLine(line);
                 var em = (cols[emailIdx] || '').trim();
                 var nm = nameIdx !== -1 ? ((cols[nameIdx] || '').trim() || null) : null;
-                var rl = roleIdx !== -1 ? ((cols[roleIdx] || '').trim().toLowerCase() || 'employee') : 'employee';
+                var rl = roleIdx !== -1 ? ((cols[roleIdx] || '').trim().toLowerCase() || 'learner') : 'learner';
                 return { email: em, name: nm, role: rl, valid: validateEmail(em) };
             });
 
