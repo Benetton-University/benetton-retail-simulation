@@ -82,6 +82,9 @@
         .user-table td { padding: 12px 16px; font-size: 0.92rem; border-bottom: 1px solid #f0f0f0; color: #333; }
         .user-table tr:last-child td { border-bottom: none; }
         .user-table tr:hover td { background: #fafafa; }
+        .user-table th:first-child, .user-table td:first-child { width: 40px; padding-right: 0; }
+        .row-check { cursor: pointer; width: 15px; height: 15px; accent-color: #00563f; }
+        tr.selected td { background: #f0faf6; }
         .pill { display: inline-block; border-radius: 12px; padding: 3px 10px; font-size: 0.78rem; font-weight: 600; }
         .pill-admin { background: #e8f5e9; color: #2e7d32; }
         .pill-learner { background: #e3f2fd; color: #1565c0; }
@@ -158,6 +161,19 @@
             <div class="modal-actions">
                 <button class="btn btn-ghost" id="cancel-edit-btn">Cancel</button>
                 <button class="btn btn-primary" id="save-edit-btn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Delete Confirm Modal -->
+    <div id="bulk-delete-modal" class="modal-overlay">
+        <div class="modal">
+            <button class="modal-close" id="close-bulk-delete-modal">&times;</button>
+            <h2>Remove Users</h2>
+            <p style="color: #666; margin-bottom: 12px;">This will permanently delete <strong id="bulk-delete-count"></strong> from the user directory and their login accounts. This cannot be undone.</p>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" id="cancel-bulk-delete-btn">Cancel</button>
+                <button class="btn btn-danger" id="confirm-bulk-delete-btn">Delete Users</button>
             </div>
         </div>
     </div>
@@ -268,11 +284,13 @@
             <div class="table-wrap">
                 <div class="table-toolbar">
                     <input type="text" id="search-input" placeholder="Search by name or email...">
+                    <button class="btn btn-danger" id="bulk-delete-btn" style="display:none; white-space: nowrap;">Delete Selected (<span id="selected-count">0</span>)</button>
                     <button class="btn btn-primary" id="refresh-btn" style="white-space: nowrap;">&#8635; Refresh</button>
                 </div>
                 <table class="user-table">
                     <thead>
                         <tr>
+                            <th><input type="checkbox" id="select-all-check" class="row-check"></th>
                             <th>Name</th>
                             <th>Email</th>
                             <th>Role</th>
@@ -281,7 +299,7 @@
                         </tr>
                     </thead>
                     <tbody id="directory-tbody">
-                        <tr><td colspan="5" class="table-empty">Loading users...</td></tr>
+                        <tr><td colspan="6" class="table-empty">Loading users...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -300,6 +318,7 @@
         var allUsers = [];
         var pendingDeleteEmail = null;
         var parsedCSVUsers = [];
+        var selectedEmails = new Set();
 
         // ── Auth gate ──────────────────────────────────────────────
         supabaseClient.auth.getSession().then(function(res) {
@@ -490,12 +509,14 @@
 
         // ── Directory ─────────────────────────────────────────────
         function loadDirectory() {
+            selectedEmails.clear();
+            updateSelectionUI();
             document.getElementById('directory-tbody').innerHTML =
-                '<tr><td colspan="5" class="table-empty">Loading...</td></tr>';
+                '<tr><td colspan="6" class="table-empty">Loading...</td></tr>';
             callFn({ action: 'list_users' }, function(err, result) {
                 if (err || result.error) {
                     document.getElementById('directory-tbody').innerHTML =
-                        '<tr><td colspan="5" class="table-empty">Failed to load users.</td></tr>';
+                        '<tr><td colspan="6" class="table-empty">Failed to load users.</td></tr>';
                     return;
                 }
                 allUsers = result.users || [];
@@ -506,11 +527,15 @@
         function renderDirectory(users) {
             var tbody = document.getElementById('directory-tbody');
             if (users.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="table-empty">No users found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="table-empty">No users found.</td></tr>';
+                updateSelectionUI();
                 return;
             }
             tbody.innerHTML = users.map(function(u) {
-                return '<tr>'
+                var checked = selectedEmails.has(u.email) ? ' checked' : '';
+                var rowCls = selectedEmails.has(u.email) ? ' class="selected"' : '';
+                return '<tr' + rowCls + '>'
+                    + '<td><input type="checkbox" class="row-check" data-email="' + escHtml(u.email) + '"' + checked + '></td>'
                     + '<td>' + escHtml(u.name || '—') + '</td>'
                     + '<td>' + escHtml(u.email) + '</td>'
                     + '<td><span class="pill pill-' + escHtml(u.role) + '">' + escHtml(u.role) + '</span></td>'
@@ -521,6 +546,26 @@
                     + '</td>'
                     + '</tr>';
             }).join('');
+            updateSelectionUI();
+        }
+
+        function updateSelectionUI() {
+            var count = selectedEmails.size;
+            document.getElementById('selected-count').textContent = count;
+            document.getElementById('bulk-delete-btn').style.display = count > 0 ? '' : 'none';
+
+            var allCheck = document.getElementById('select-all-check');
+            var visibleBoxes = Array.from(document.querySelectorAll('#directory-tbody .row-check'));
+            var visibleEmails = visibleBoxes.map(function(cb) { return cb.getAttribute('data-email'); });
+            if (visibleEmails.length === 0) {
+                allCheck.checked = false;
+                allCheck.indeterminate = false;
+            } else {
+                var allSel = visibleEmails.every(function(e) { return selectedEmails.has(e); });
+                var someSel = visibleEmails.some(function(e) { return selectedEmails.has(e); });
+                allCheck.checked = allSel;
+                allCheck.indeterminate = someSel && !allSel;
+            }
         }
 
         document.getElementById('search-input').addEventListener('input', function() {
@@ -532,6 +577,52 @@
         });
 
         document.getElementById('refresh-btn').addEventListener('click', loadDirectory);
+
+        // ── Checkbox selection ────────────────────────────────────
+        document.getElementById('directory-tbody').addEventListener('change', function(e) {
+            if (!e.target.classList.contains('row-check')) return;
+            var email = e.target.getAttribute('data-email');
+            if (e.target.checked) { selectedEmails.add(email); } else { selectedEmails.delete(email); }
+            e.target.closest('tr').classList.toggle('selected', e.target.checked);
+            updateSelectionUI();
+        });
+
+        document.getElementById('select-all-check').addEventListener('change', function() {
+            var checkboxes = document.querySelectorAll('#directory-tbody .row-check');
+            checkboxes.forEach(function(cb) {
+                var email = cb.getAttribute('data-email');
+                cb.checked = this.checked;
+                cb.closest('tr').classList.toggle('selected', this.checked);
+                if (this.checked) { selectedEmails.add(email); } else { selectedEmails.delete(email); }
+            }, this);
+            updateSelectionUI();
+        });
+
+        document.getElementById('bulk-delete-btn').addEventListener('click', function() {
+            if (selectedEmails.size === 0) return;
+            var count = selectedEmails.size;
+            document.getElementById('bulk-delete-count').textContent = count + ' user' + (count > 1 ? 's' : '');
+            document.getElementById('bulk-delete-modal').classList.add('active');
+        });
+
+        document.getElementById('close-bulk-delete-modal').addEventListener('click', function() {
+            document.getElementById('bulk-delete-modal').classList.remove('active');
+        });
+        document.getElementById('cancel-bulk-delete-btn').addEventListener('click', function() {
+            document.getElementById('bulk-delete-modal').classList.remove('active');
+        });
+        document.getElementById('confirm-bulk-delete-btn').addEventListener('click', function() {
+            var emails = Array.from(selectedEmails);
+            var btn = document.getElementById('confirm-bulk-delete-btn');
+            btn.disabled = true; btn.textContent = 'Deleting...';
+            callFn({ action: 'bulk_delete', emails: emails }, function(err, result) {
+                btn.disabled = false; btn.textContent = 'Delete Users';
+                document.getElementById('bulk-delete-modal').classList.remove('active');
+                if (err || result.error) { showToast('Error deleting users.', 'error'); return; }
+                showToast('Deleted ' + emails.length + ' user' + (emails.length > 1 ? 's' : '') + '.', 'success');
+                loadDirectory();
+            });
+        });
 
         // ── Directory table event delegation ──────────────────────
         document.getElementById('directory-tbody').addEventListener('click', function(e) {

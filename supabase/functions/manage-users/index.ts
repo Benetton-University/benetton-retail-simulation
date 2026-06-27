@@ -154,6 +154,23 @@ Deno.serve(async (req) => {
       return respond({ status: 'deleted' })
     }
 
+    // --- BULK DELETE ---
+    if (action === 'bulk_delete') {
+      const { emails } = payload as { emails: string[] }
+
+      const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
+
+      for (const email of emails) {
+        await supabaseAdmin.from('user_roles').delete().eq('email', email)
+        const authUser = authUsers?.users.find((u) => u.email === email)
+        if (authUser) {
+          await supabaseAdmin.auth.admin.deleteUser(authUser.id)
+        }
+      }
+
+      return respond({ status: 'deleted', count: emails.length })
+    }
+
     return respond({ error: 'Unknown action' }, 400)
   } catch (err: unknown) {
     return respond({ error: (err as Error).message }, 500)
